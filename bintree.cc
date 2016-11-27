@@ -4,23 +4,82 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <queue>
+#include "bintree.h"
 
 using namespace std;
 
+// ******************
+// Magic
+// ******************
+
+class sizecomp {
+public:
+	bool operator()( const binary_tree& a, const binary_tree& b ) {
+		return a.height() > b.height() or ( a.height() == b.height() and a.size() > b.size() );
+	}
+};
+
+vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axioms ) const {
+	map<binary_tree,binary_tree::const_iterator> master; // make unordered
+	priority_queue<binary_tree,vector<binary_tree>,sizecomp> todo;
+	todo.push( first() );
+	master[first()] = binary_tree::cend();
+	vector<binary_tree> proof;
+	cin.get();
+	while( not todo.empty() ) {
+		binary_tree X = todo.top(), Y;
+		#ifdef VERBOSE_PROOF
+		cin.get();
+		cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
+		#endif
+		todo.pop();
+		for( auto& axiom : axioms ) {
+			cout << "Axiom: " << axiom << endl;
+			for( auto& N : X ) {
+				cout << "Sub: "; N.print( cout ); cout << endl;
+				cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
+				for( int i = 0; i < 2; ++i ) {
+					cout << "Side: " << i << endl;
+					bool res = axiom.apply( i, X, &N, Y );
+					cout << res << endl;
+					if( res and master.count( Y ) == 0 ) {
+						cout << "New: " << Y << endl;
+						master[Y] = X.crootitr();
+						if( Y == second() ) {
+							while( true ) {
+								auto result = master.find( Y );
+								proof.emplace_back( move( Y ) );
+								if( result == master.end() )
+									return proof;
+								Y = binary_tree( result->second );
+							}
+						}
+						todo.emplace( move(Y) );
+					}
+				}
+			}
+		}
+	}
+	return {};
+}
+
+// ******************
+// Tree operations
+// ******************
 
 binary_tree::node* binary_tree::node::clone() const {
 	return new node( child[0] ? child[0]->clone() : nullptr, child[1] ? child[1]->clone() : nullptr, id );
 }
 
-binary_tree::node* binary_tree::node::clonesert( binary_tree::node* where, binary_tree::node* what ) const {
+binary_tree::node* binary_tree::node::clonesert( const binary_tree::node* where, binary_tree::node* what ) const {
 	if( this == where )
 		return what;
 	return new node( child[0] ? child[0]->clonesert( where, what ) : nullptr, child[1] ? child[1]->clonesert( where, what ) : nullptr, id );
 }
 
-binary_tree binary_tree::clonesert( binary_tree::node* where, binary_tree::node* what ) {
+binary_tree binary_tree::clonesert( const binary_tree::node* where, binary_tree::node* what ) const {
 	return binary_tree( root->clonesert( where, what ) );
 }
 
@@ -28,14 +87,13 @@ bool binary_tree::node::leaf() const {
 	return child[0] == nullptr and child[1] == nullptr;
 }
 
-
 binary_tree::node* binary_tree::node::cascade() {
 	if( child[0] ) delete child[0]->cascade();
 	if( child[1] ) delete child[1]->cascade();
 	return this;
 }
 
-bool binary_tree::node::grab( node* rule, map<int,node*>& result ) {
+bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
 	if( rule->height > height )
 		return false;
 	if( rule->child[0] and child[0] and not child[0]->grab( rule->child[0], result ) )
@@ -50,32 +108,53 @@ bool binary_tree::node::grab( node* rule, map<int,node*>& result ) {
 	return true;
 }
 
-binary_tree::node* binary_tree::node::subsitute( const map<int,node*>& substitution ) {
+binary_tree::node* binary_tree::node::subsitute( const map<int,const binary_tree::node*>& substitution ) const {
 	if( substitution.count(id) )
 		return substitution.at(id)->clone();
 	else
 		return new node( child[0] ? child[0]->subsitute( substitution ) : nullptr, child[1] ? child[1]->subsitute( substitution ) : nullptr, id );
 }
 
-bool subtree_equivalence::apply( int i, binary_tree& parent, binary_tree::node* n, binary_tree& res ) {
-	map<int,binary_tree::node*> substitution;
-	if( not n->grab( tree[i].root, substitution ) )
-		return false;
-	res = parent.clonesert( n, tree[not i].root->subsitute( substitution ) );
-	return true;
+bool subtree_equivalence::apply( int i, const binary_tree& parent, binary_tree::const_iterator itr, binary_tree& res ) const {
+	return parent.transform( itr, side(i), side(not i), res );
 }
 
+bool binary_tree::transform( binary_tree::const_iterator pos, const binary_tree& from, const binary_tree& to, binary_tree& res ) const {
+	map<int,const binary_tree::node*> substitution;
+	if( not pos->grab( from.root, substitution ) )
+		return false;
+	for( auto p : substitution )
+		cout << p.first << " => ", p.second->print( cout ), cout << endl;
+	res = clonesert( (const node*) pos, to.crootitr()->subsitute( substitution ) );
+	return true;
+}
 
 // ******************
 // Getters & Setters
 // ******************
 
+binary_tree& subtree_equivalence::side( int i ) {
+	return tree[!!i];
+}
+
+const binary_tree& subtree_equivalence::side( int i ) const {
+	return tree[!!i];
+}
+
 binary_tree& subtree_equivalence::first() {
-	return tree[0];
+	return side(0);
 }
 
 binary_tree& subtree_equivalence::second() {
-	return tree[1];
+	return side(1);
+}
+
+const binary_tree& subtree_equivalence::first() const {
+	return side(0);
+}
+
+const binary_tree& subtree_equivalence::second() const {
+	return side(1);
 }
 
 size_t binary_tree::size() const {
@@ -90,12 +169,20 @@ size_t binary_tree::height() const {
 // Iterators
 // ******************
 
+binary_tree::iterator::iterator() : iterator( nullptr ) {
+}
+
 binary_tree::iterator::iterator( node* n ) {
 	val = nullptr;
 	if( n ) {
 		next = n;
 		operator++();
 	}
+}
+
+binary_tree::iterator::iterator( node* v, node* n ) {
+	val = v;
+	next = n;
 }
 
 binary_tree::iterator& binary_tree::iterator::operator++() {
@@ -143,7 +230,14 @@ binary_tree::iterator binary_tree::begin() {
 }
 
 binary_tree::iterator binary_tree::end() {
-	return iterator( nullptr );
+	return iterator();
+}
+
+binary_tree::iterator binary_tree::rootitr() {
+	return iterator( root, root ? root->child[1] : nullptr );
+}
+
+binary_tree::const_iterator::const_iterator() : const_iterator( nullptr ) {
 }
 
 binary_tree::const_iterator::const_iterator( const node* n ) {
@@ -152,6 +246,11 @@ binary_tree::const_iterator::const_iterator( const node* n ) {
 		next = n;
 		operator++();
 	}
+}
+
+binary_tree::const_iterator::const_iterator( const node* v, const node* n ) {
+	val = v;
+	next = n;
 }
 
 binary_tree::const_iterator& binary_tree::const_iterator::operator++() {
@@ -173,12 +272,12 @@ binary_tree::const_iterator& binary_tree::const_iterator::operator++() {
 }
 
 binary_tree::const_iterator binary_tree::const_iterator::operator++(int) {
-	auto old = binary_tree::iterator( *this );
+	auto old = binary_tree::const_iterator( *this );
 	operator++();
 	return old;
 }
 
-binary_tree::iterator::reference binary_tree::const_iterator::operator*() const {
+binary_tree::const_iterator::reference binary_tree::const_iterator::operator*() const {
 	return *val;
 }
 
@@ -190,16 +289,24 @@ bool binary_tree::const_iterator::operator==( const const_iterator& other ) cons
 	return val == other.val;
 }
 
-bool binary_tree::const_iterator::operator!=( const iterator& other ) const {
+bool binary_tree::const_iterator::operator!=( const const_iterator& other ) const {
 	return not operator==( other );
 }
 
-binary_tree::const_iterator binary_tree::cbegin() {
+binary_tree::const_iterator binary_tree::cbegin() const {
 	return const_iterator( root );
 }
 
 binary_tree::const_iterator binary_tree::cend() {
-	return const_iterator( nullptr );
+	return const_iterator();
+}
+
+binary_tree::const_iterator binary_tree::crootitr() const {
+	return const_iterator( root, root ? root->child[1] : nullptr );
+}
+
+binary_tree::const_iterator::operator const node*() const {
+	return val;
 }
 
 // ******************
@@ -208,16 +315,16 @@ binary_tree::const_iterator binary_tree::cend() {
 
 binary_tree::node* binary_tree::node::scan( istream& is ) {
 	is >> ws;
-	char c = is.peek();
+	char c = char( is.peek() );
 	if( c == '(' ) {
 		is.get();
 		node* a = scan( is );
 		is >> ws;
-		assert( is.get() == BINOP_SYMBOL );
+		int op = is.get();
 		node* b = scan( is );
 		is >> ws;
 		assert( is.get() == ')' );
-		return new node( a, b );
+		return new node( a, b, op );
 	} else {
 		int id;
 		is >> id;
@@ -226,7 +333,7 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 	}
 }
 
-void binary_tree::node::print( ostream& os ) {
+void binary_tree::node::print( ostream& os ) const {
 	if( not child[0] and not child[1] )
 		os << id;
 	else {
@@ -235,7 +342,7 @@ void binary_tree::node::print( ostream& os ) {
 			os << "?"; // error symbol
 		else 
 			child[0]->print( os );
-		os << BINOP_SYMBOL;
+		os << char(id);
 		if( not child[1] )
 			os << "?";
 		else 
@@ -248,7 +355,7 @@ void binary_tree::scan( istream& is ) {
 	root = node::scan( is );
 }
 
-void binary_tree::print( ostream& os ) {
+void binary_tree::print( ostream& os ) const {
 	if( root )
 		root->print( os );
 	else
@@ -260,7 +367,7 @@ istream& operator>>( istream& is, binary_tree& bt ) {
 	return is;
 }
 
-ostream& operator<<( ostream& os, binary_tree& bt ) {
+ostream& operator<<( ostream& os, const binary_tree& bt ) {
 	bt.print( os );
 	return os;
 }
@@ -272,7 +379,7 @@ void subtree_equivalence::scan( istream& is ) {
 	tree[1].scan( is );
 }
 
-void subtree_equivalence::print( ostream& os ) {
+void subtree_equivalence::print( ostream& os ) const {
 	os << tree[0] << "=" << tree[1];
 }
 
@@ -281,7 +388,7 @@ istream& operator>>( istream& is, subtree_equivalence& be ) {
 	return is;
 }
 
-ostream& operator<<( ostream& os, subtree_equivalence& be ) {
+ostream& operator<<( ostream& os, const subtree_equivalence& be ) {
 	be.print( os );
 	return os;
 }
@@ -359,13 +466,6 @@ bool binary_tree::operator<=( const binary_tree& other ) const {
 	return not operator>( other );
 }
 
-class sizecomp {
-public:
-	bool operator()( const binary_tree& a, const binary_tree& b ) {
-		return a.size() > b.size() or ( a.size() == b.size() and a.height() > b.height() );
-	}
-};
-
 // ******************
 // hashing
 // ******************
@@ -374,7 +474,7 @@ size_t binary_tree::hash() const {
 	if( _hash == 0 and root ) {
 		ostringstream ss;
 		print( ss );
-		_hash = std::hash<std::string>( ss.str() );
+		_hash = std::hash<std::string>()( ss.str() );
 	}
 	return _hash;
 }
@@ -414,4 +514,54 @@ binary_tree::binary_tree() : binary_tree( nullptr ) {
 binary_tree::binary_tree( binary_tree::node* r ) {
 	root = r;
 	_hash = 0;
+}
+
+binary_tree::binary_tree( string in ) {
+	istringstream ss( move( in ) );
+	scan( ss );
+}
+
+binary_tree::binary_tree( binary_tree::const_iterator itr ) : binary_tree( itr->clone() ) {
+}
+
+binary_tree::binary_tree( const binary_tree& other ) {
+	*this = other;
+}
+
+binary_tree::binary_tree( binary_tree&& other ) {
+	*this = other;
+}
+
+binary_tree& binary_tree::operator=( const binary_tree& other ) {
+	root = other.root ? other.root->clone() : nullptr;
+	_hash = other._hash;
+	return *this;
+}
+
+binary_tree& binary_tree::operator=( binary_tree&& other ) {
+	root = other.root;
+	_hash = other._hash;
+	other.root = nullptr;
+	other._hash = 0;
+	return *this;
+}
+
+binary_tree::~binary_tree() {
+	if( root )
+		delete root->cascade();
+}
+
+subtree_equivalence::subtree_equivalence( string in ) {
+	istringstream ss( move( in ) );
+	scan( ss );
+}
+
+subtree_equivalence::subtree_equivalence( const subtree_equivalence& other ) {
+	first() = other.first();
+	second() = other.second();
+}
+
+subtree_equivalence::subtree_equivalence( subtree_equivalence&& other ) {
+	first() = move( other.first() );
+	second() = move( other.second() );
 }

@@ -4,6 +4,8 @@
 #include <vector>
 #include <map>
 
+#define VERBOSE_PROOF
+
 class binary_tree {
 public:
 	struct node {
@@ -12,15 +14,19 @@ public:
 		int size;
 		node* child[2];
 		bool leaf() const;
-		bool grab( node*, std::map<int,node*>& );
-		void print( std::ostream& );
-		static node* scan( std::istream& );
+		bool grab( const node*, std::map<int,const node*>& ) const;
 		bool operator==( const node& other ) const;
+		bool operator!=( const node& other ) const;
 		bool operator<( const node& other ) const;
+		bool operator>( const node& other ) const;
+		bool operator<=( const node& other ) const;
+		bool operator>=( const node& other ) const;
 		node* clone() const;
 		node* cascade();
-		node* clonesert( node* where, node* what ) const;
-		node* subsitute( const std::map<int,node*>& substitution );
+		node* clonesert( const node* where, node* what ) const;
+		node* subsitute( const std::map<int,const node*>& substitution ) const;
+		void print( std::ostream& ) const;
+		static node* scan( std::istream& );
 		node();
 		node( int );
 		node( node*, node* );
@@ -42,7 +48,10 @@ public:
 		reference operator*() const;
 		bool operator==( const iterator& ) const;
 		bool operator!=( const iterator& ) const;
-		iterator( node* );
+		iterator();
+		iterator( pointer );
+		iterator( pointer, pointer );
+		iterator( const iterator& ) = default;
 	};
 	class const_iterator {
 		std::stack<const node*> loc;
@@ -58,12 +67,15 @@ public:
 		const_iterator operator++(int);
 		pointer operator->() const;
 		reference operator*() const;
+		operator const node*() const;
 		bool operator==( const const_iterator& ) const;
 		bool operator!=( const const_iterator& ) const;
-		const_iterator( const node* );
+		const_iterator();
+		const_iterator( pointer );
+		const_iterator( pointer, pointer );
+		const_iterator( const const_iterator& ) = default;
 	};
 private:
-	static char BINOP_SYMBOL;
 	node* root;
 	mutable std::size_t _hash;
 public:
@@ -71,12 +83,15 @@ public:
 	size_t height() const;
 	size_t hash() const;
 	void scan( std::istream& );
-	void print( std::ostream& );
-	binary_tree clonesert( node*, node* );
+	void print( std::ostream& ) const;
+	binary_tree clonesert( const node*, node* ) const;
+	bool transform( binary_tree::const_iterator, const binary_tree&, const binary_tree&, binary_tree& ) const;
+	iterator rootitr();
 	iterator begin();
-	iterator end();
+	static iterator end();
+	const_iterator crootitr() const;
 	const_iterator cbegin() const;
-	const_iterator cend() const;
+	static const_iterator cend();
 	bool operator==( const binary_tree& ) const;
 	bool operator!=( const binary_tree& ) const;
 	bool operator<( const binary_tree& ) const;
@@ -84,28 +99,45 @@ public:
 	bool operator<=( const binary_tree& ) const;
 	bool operator>=( const binary_tree& ) const;
 	binary_tree();
+	binary_tree( const binary_tree& );
+	binary_tree( binary_tree&& );
+	binary_tree( std::string );
+	binary_tree( const_iterator );
+	binary_tree& operator=( const binary_tree& );
+	binary_tree& operator=( binary_tree&& );
+	~binary_tree();
+private:
 	binary_tree( node* );
 };
 
 class subtree_equivalence {
 	binary_tree tree[2];
 public:
+	binary_tree& side( int );
 	binary_tree& first();
 	binary_tree& second();
-	bool apply( int, binary_tree&, binary_tree::iterator, binary_tree& );
+	const binary_tree& side( int ) const;
+	const binary_tree& first() const;
+	const binary_tree& second() const;
+	bool apply( int, const binary_tree&, binary_tree::const_iterator, binary_tree& ) const;
+	std::vector<binary_tree> prove( std::vector<subtree_equivalence> ) const;
 	void scan( std::istream& );
-	void print( std::ostream& );
+	void print( std::ostream& ) const;
+	subtree_equivalence( std::string );
+	subtree_equivalence( const subtree_equivalence& );
+	subtree_equivalence( subtree_equivalence&& );
+	~subtree_equivalence() = default;
 };
 
 namespace std {
-	template<> struct std::hash<binary_tree> {
+	template<> struct hash<binary_tree> {
 		typedef binary_tree argument_type;
 		typedef std::size_t result_type;
 		result_type operator()( const argument_type& ) const;
 	};
 }
 
-std::ostream& operator<<( std::ostream& os, binary_tree& bt );
+std::ostream& operator<<( std::ostream& os, const binary_tree& bt );
 std::istream& operator>>( std::istream& is, binary_tree& bt );
-
-binary_tree::BINOP_SYMBOL = '*';
+std::ostream& operator<<( std::ostream& os, const subtree_equivalence& se );
+std::istream& operator>>( std::istream& is, subtree_equivalence& se );
