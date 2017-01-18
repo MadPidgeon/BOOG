@@ -25,7 +25,7 @@ public:
 		bool operator>=( const node& other ) const;
 		node* clone() const;
 		node* cascade();
-		node* clonesert( const node* where, node* what ) const;
+		node* clonesert( const node* where, node* what, int& ) const;
 		node* subsitute( const std::map<int,const node*>& substitution ) const;
 		void print( std::ostream& ) const;
 		static node* scan( std::istream& );
@@ -33,6 +33,7 @@ public:
 		node( int );
 		node( node*, node* );
 		node( node*, node*, int );
+		~node(); // test
 	};
 	class iterator {
 		std::stack<node*> loc;
