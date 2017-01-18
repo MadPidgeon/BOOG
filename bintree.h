@@ -3,7 +3,9 @@
 #include <stack>
 #include <vector>
 #include <map>
+#include <memory>
 
+#define ERROR_SYMBOL "?"
 #define VERBOSE_PROOF
 
 class binary_tree {
@@ -71,12 +73,12 @@ public:
 		bool operator==( const const_iterator& ) const;
 		bool operator!=( const const_iterator& ) const;
 		const_iterator();
-		const_iterator( pointer );
+		const_iterator( pointer, bool fixed = true );
 		const_iterator( pointer, pointer );
 		const_iterator( const const_iterator& ) = default;
 	};
 private:
-	node* root;
+	std::shared_ptr<node> root;
 	mutable std::size_t _hash;
 public:
 	size_t size() const;
@@ -85,7 +87,7 @@ public:
 	void scan( std::istream& );
 	void print( std::ostream& ) const;
 	binary_tree clonesert( const node*, node* ) const;
-	bool transform( binary_tree::const_iterator, const binary_tree&, const binary_tree&, binary_tree& ) const;
+	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
 	iterator rootitr();
 	iterator begin();
 	static iterator end();
@@ -119,7 +121,7 @@ public:
 	const binary_tree& side( int ) const;
 	const binary_tree& first() const;
 	const binary_tree& second() const;
-	bool apply( int, const binary_tree&, binary_tree::const_iterator, binary_tree& ) const;
+	bool apply( int, const binary_tree&, const binary_tree::node*, binary_tree& ) const;
 	std::vector<binary_tree> prove( std::vector<subtree_equivalence> ) const;
 	void scan( std::istream& );
 	void print( std::ostream& ) const;

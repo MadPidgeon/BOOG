@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Wextra -Wpedantic -Wconversion -fmax-errors=3 -std=c++14
+CFLAGS = -Wall -Wextra -Wpedantic -Wconversion -fmax-errors=3 -std=c++14 -g
 TARGET = boog
 SRCS = bintree.cc main.cc
 OBJS = $(SRCS:.cc=.o)

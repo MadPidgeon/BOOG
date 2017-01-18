@@ -22,38 +22,54 @@ public:
 };
 
 vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axioms ) const {
-	map<binary_tree,binary_tree::const_iterator> master; // make unordered
+	// ITERATORS CANNOT BE TRUSTED
+	// map<binary_tree,const binary_tree::const_iterator> master; // make unordered
+	map<binary_tree,binary_tree> master;
 	priority_queue<binary_tree,vector<binary_tree>,sizecomp> todo;
 	todo.push( first() );
-	master[first()] = binary_tree::cend();
+	//master.insert( make_pair( first(), binary_tree::cend() ) );
+	binary_tree empty_tree;
+	master[first()] = empty_tree;
 	vector<binary_tree> proof;
-	cin.get();
+	binary_tree Y;
 	while( not todo.empty() ) {
-		binary_tree X = todo.top(), Y;
+		binary_tree X = move( todo.top() );
 		#ifdef VERBOSE_PROOF
-		cin.get();
-		cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
+		/*cin.get();*/
+		// cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
 		#endif
 		todo.pop();
-		for( auto& axiom : axioms ) {
-			cout << "Axiom: " << axiom << endl;
-			for( auto& N : X ) {
-				cout << "Sub: "; N.print( cout ); cout << endl;
-				cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
+		for( const auto& axiom : axioms ) {
+			//cout << "Axiom: " << axiom << endl;
+			for( const auto& N : X ) {
+				//cout << "Sub: "; N.print( cout ); cout << endl;
+				//cout << "Current tree (" << X.height() << "," << X.size() << "): " << X << endl; 
 				for( int i = 0; i < 2; ++i ) {
-					cout << "Side: " << i << endl;
+					// cout << "Side: " << i << endl;
 					bool res = axiom.apply( i, X, &N, Y );
-					cout << res << endl;
+					//cout << res << endl;
 					if( res and master.count( Y ) == 0 ) {
-						cout << "New: " << Y << endl;
-						master[Y] = X.crootitr();
+						// cout << "New: " << Y << endl;
+						//master.insert( make_pair( Y, X.crootitr() ) );
+						master[Y] = X;
+						// master[Y] = X.crootitr();
+						// cout << Y << " => "; master[Y]->print(cout); cout << endl;
 						if( Y == second() ) {
+							/*for( const auto& X : master ) {
+								cout << "@ " << X.first << " <= " << X.second << endl;
+							}*/
+							/*for( const auto& p : master ) {
+								cout << p.first << " => " << flush;
+								if( p.second != nullptr )
+									p.second->print( cout ); 
+								cout << endl;
+							}*/
 							while( true ) {
 								auto result = master.find( Y );
-								proof.emplace_back( move( Y ) );
-								if( result == master.end() )
+								proof.emplace_back( Y );
+								if( result->second == empty_tree )
 									return proof;
-								Y = binary_tree( result->second );
+								Y = result->second;
 							}
 						}
 						todo.emplace( move(Y) );
@@ -115,17 +131,18 @@ binary_tree::node* binary_tree::node::subsitute( const map<int,const binary_tree
 		return new node( child[0] ? child[0]->subsitute( substitution ) : nullptr, child[1] ? child[1]->subsitute( substitution ) : nullptr, id );
 }
 
-bool subtree_equivalence::apply( int i, const binary_tree& parent, binary_tree::const_iterator itr, binary_tree& res ) const {
+bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_tree::node* itr, binary_tree& res ) const {
 	return parent.transform( itr, side(i), side(not i), res );
 }
 
-bool binary_tree::transform( binary_tree::const_iterator pos, const binary_tree& from, const binary_tree& to, binary_tree& res ) const {
+bool binary_tree::transform( const binary_tree::node* pos, const binary_tree& from, const binary_tree& to, binary_tree& res ) const {
 	map<int,const binary_tree::node*> substitution;
-	if( not pos->grab( from.root, substitution ) )
+	//pos->print( cout ); cout << " " << from << " " << to << endl;
+	if( not pos->grab( from.root.get(), substitution ) )
 		return false;
-	for( auto p : substitution )
-		cout << p.first << " => ", p.second->print( cout ), cout << endl;
-	res = clonesert( (const node*) pos, to.crootitr()->subsitute( substitution ) );
+	//for( auto p : substitution )
+	//	cout << p.first << " => ", p.second->print( cout ), cout << endl;
+	res = clonesert( pos, to.root->subsitute( substitution ) );
 	return true;
 }
 
@@ -226,7 +243,7 @@ bool binary_tree::iterator::operator!=( const iterator& other ) const {
 }
 
 binary_tree::iterator binary_tree::begin() {
-	return iterator( root );
+	return iterator( root.get() );
 }
 
 binary_tree::iterator binary_tree::end() {
@@ -234,17 +251,18 @@ binary_tree::iterator binary_tree::end() {
 }
 
 binary_tree::iterator binary_tree::rootitr() {
-	return iterator( root, root ? root->child[1] : nullptr );
+	return iterator( root.get(), root ? root->child[1] : nullptr );
 }
 
 binary_tree::const_iterator::const_iterator() : const_iterator( nullptr ) {
 }
 
-binary_tree::const_iterator::const_iterator( const node* n ) {
+binary_tree::const_iterator::const_iterator( const node* n, bool fixed ) {
 	val = nullptr;
 	if( n ) {
 		next = n;
-		operator++();
+		if( not fixed )
+			operator++();
 	}
 }
 
@@ -294,7 +312,7 @@ bool binary_tree::const_iterator::operator!=( const const_iterator& other ) cons
 }
 
 binary_tree::const_iterator binary_tree::cbegin() const {
-	return const_iterator( root );
+	return const_iterator( root.get(), false );
 }
 
 binary_tree::const_iterator binary_tree::cend() {
@@ -302,7 +320,7 @@ binary_tree::const_iterator binary_tree::cend() {
 }
 
 binary_tree::const_iterator binary_tree::crootitr() const {
-	return const_iterator( root, root ? root->child[1] : nullptr );
+	return const_iterator( root.get(), root ? root->child[1] : nullptr );
 }
 
 binary_tree::const_iterator::operator const node*() const {
@@ -339,12 +357,12 @@ void binary_tree::node::print( ostream& os ) const {
 	else {
 		os << "(";
 		if( not child[0] )
-			os << "?"; // error symbol
+			os << ERROR_SYMBOL; // error symbol
 		else 
 			child[0]->print( os );
 		os << char(id);
 		if( not child[1] )
-			os << "?";
+			os << ERROR_SYMBOL;
 		else 
 			child[1]->print( os );
 		os << ")";
@@ -352,14 +370,14 @@ void binary_tree::node::print( ostream& os ) const {
 }
 
 void binary_tree::scan( istream& is ) {
-	root = node::scan( is );
+	root.reset( node::scan( is ) );
 }
 
 void binary_tree::print( ostream& os ) const {
 	if( root )
 		root->print( os );
 	else
-		os << "?"; // error symbol
+		os << ERROR_SYMBOL;
 }
 
 istream& operator>>( istream& is, binary_tree& bt ) {
@@ -439,9 +457,9 @@ bool binary_tree::node::operator<=( const binary_tree::node& other ) const {
 }
 
 bool binary_tree::operator==( const binary_tree& other ) const {
-	if( not( root or other.root ) )
-		return root == other.root;
-	return *root == *other.root;
+	if( root and other.root )
+		return *root == *other.root;
+	return root == other.root;
 }
 
 bool binary_tree::operator!=( const binary_tree& other ) const {
@@ -449,9 +467,9 @@ bool binary_tree::operator!=( const binary_tree& other ) const {
 }
 
 bool binary_tree::operator<( const binary_tree& other ) const {
-	if( not( root or other.root ) )
-		return root < other.root;
-	return *root < *other.root;
+	if( root and other.root )
+		return *root < *other.root;
+	return root < other.root;
 }
 
 bool binary_tree::operator>( const binary_tree& other ) const {
@@ -511,8 +529,8 @@ binary_tree::node::node( node* a, node* b ) : node( a, b, -2 ) {
 binary_tree::binary_tree() : binary_tree( nullptr ) {
 }
 
-binary_tree::binary_tree( binary_tree::node* r ) {
-	root = r;
+binary_tree::binary_tree( binary_tree::node* r ) { // change
+	root.reset( r );
 	_hash = 0;
 }
 
@@ -529,11 +547,11 @@ binary_tree::binary_tree( const binary_tree& other ) {
 }
 
 binary_tree::binary_tree( binary_tree&& other ) {
-	*this = other;
+	*this = std::move( other );
 }
 
 binary_tree& binary_tree::operator=( const binary_tree& other ) {
-	root = other.root ? other.root->clone() : nullptr;
+	root.reset( other.root ? other.root->clone() : nullptr );
 	_hash = other._hash;
 	return *this;
 }
@@ -541,14 +559,16 @@ binary_tree& binary_tree::operator=( const binary_tree& other ) {
 binary_tree& binary_tree::operator=( binary_tree&& other ) {
 	root = other.root;
 	_hash = other._hash;
-	other.root = nullptr;
+	other.root.reset();
 	other._hash = 0;
 	return *this;
 }
 
 binary_tree::~binary_tree() {
-	if( root )
-		delete root->cascade();
+	if( root ) {
+		root->cascade();
+		root.reset();
+	}
 }
 
 subtree_equivalence::subtree_equivalence( string in ) {
@@ -562,6 +582,6 @@ subtree_equivalence::subtree_equivalence( const subtree_equivalence& other ) {
 }
 
 subtree_equivalence::subtree_equivalence( subtree_equivalence&& other ) {
-	first() = move( other.first() );
-	second() = move( other.second() );
+	first() = std::move( other.first() );
+	second() = std::move( other.second() );
 }
