@@ -35,13 +35,27 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 	while( not todo.empty() ) {
 		binary_tree X = move( todo.top() );
 		todo.pop();
+		#ifdef DEBUG
+		cout << "Tree: " << X << endl;
+		#endif
+
 		for( const auto& axiom : axioms ) {
-			//cout << "Axiom: " << axiom << endl;
+			#ifdef DEBUG
+			cout << "Axiom: " << axiom << endl;
+			#endif
+
 			for( const auto& N : X ) {
-				//cout << "Sub: "; N.print( cout ); cout << endl;
+				#ifdef DEBUG
+				cout << "Sub: "; N.print( cout ); cout << endl;
+				#endif
+
 				for( int i = 0; i < 2; ++i ) {
 					bool res = axiom.apply( i, X, &N, Y );
 					if( res and master.count( Y ) == 0 ) {
+						#ifdef DEBUG
+						cout << "Res: " << Y << endl;
+						#endif
+						
 						master[Y] = X;
 						if( Y == second() ) {
 							while( true ) {
@@ -57,6 +71,9 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 				}
 			}
 		}
+		#ifdef DEBUG
+		cin.get();
+		#endif
 	}
 	return {};
 }
@@ -102,19 +119,33 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 		return false;
 	if( rule->child[1] and child[1] and not child[1]->grab( rule->child[1], result ) )
 		return false;
-	if( rule->child[0] == nullptr and rule->child[1] == nullptr ) {
-		if( result.count( rule->id ) )
-			return *result[rule->id] == *this;
-		result[rule->id] = this;
+	if( rule->leaf() ) {
+		if( rule->id < 0 ) { // constant
+			if( leaf() ) {
+				if( rule->id == id )
+					return true;
+				// TODO: force (this) variable to constant
+			}
+			return false;
+		} else { // variable
+			if( result.count( rule->id ) )
+				return *result[rule->id] == *this;
+			result[rule->id] = this;
+		}
 	}
 	return true;
 }
 
 binary_tree::node* binary_tree::node::subsitute( const map<int,const binary_tree::node*>& substitution ) const {
-	if( substitution.count(id) )
-		return substitution.at(id)->clone();
-	else
-		return new node( child[0] ? child[0]->subsitute( substitution ) : nullptr, child[1] ? child[1]->subsitute( substitution ) : nullptr, id );
+	if( leaf() ) {
+		if( id < 0 )
+			return new node( id );
+		else if( substitution.count(id) ) 
+			return substitution.at(id)->clone();
+		else
+			throw;
+	} else
+		return new node( child[0]->subsitute( substitution ), child[1]->subsitute( substitution ), id );
 }
 
 bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_tree::node* itr, binary_tree& res ) const {
@@ -323,25 +354,37 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		node* a = scan( is );
 		is >> ws;
 		int op = is.get();
+		assert( ispunct( op ) and op != '(' and op != ')' );
 		node* b = scan( is );
 		is >> ws;
 		assert( is.get() == ')' );
 		return new node( a, b, op );
-	} else {
+	} else if( isalpha( c ) ) {
+		is.get();
+		is >> ws;
+		return new node( tolower( c ) - 'a' );
+	} else if( isdigit( c ) ) {
 		int id;
 		is >> id;
 		is >> ws;
-		return new node( id );
+		return new node( -id-1 );
+	} else {
+		throw;
 	}
 }
 
 void binary_tree::node::print( ostream& os ) const {
-	if( not child[0] and not child[1] )
-		os << id;
-	else {
+	if( not child[0] and not child[1] ) {
+		if( id < 0 )
+			os << (-id-1);
+		else if( id < 26 )
+			os << char( 'a' + id );
+		else
+			os << "t" << (id-26);
+	} else {
 		os << "(";
 		if( not child[0] )
-			os << ERROR_SYMBOL; // error symbol
+			os << ERROR_SYMBOL;
 		else 
 			child[0]->print( os );
 		os << char(id);
