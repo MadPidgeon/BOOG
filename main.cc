@@ -29,6 +29,21 @@ int main() {
 	subtree_equivalence equi8("(0+0)=0");
 	cout << "Equivalence 8: " << equi8 << endl;
 
+	subtree_equivalence equi9("(0*a)=0");
+	cout << "Equivalence 9: " << equi9 << endl;
+
+	subtree_equivalence equi10("(0*(1/0))=1");
+	cout << "Equivalence 10: " << equi10 << endl;
+
+	subtree_equivalence equi11("0=1");
+	cout << "Equivalence 11: " << equi11 << endl;
+
+	subtree_equivalence equi12("a=(a+(a+(a+b)))");
+	cout << "Equivalence 12: " << equi12 << endl;
+
+	subtree_equivalence equi13("a=(((b+a)+a)+a)");
+	cout << "Equivalence 13: " << equi13 << endl;
+
 	cout << "---------------------------------" << endl;
 
 	binary_tree statement("(a+b)");
@@ -66,6 +81,24 @@ int main() {
 	if( proof3.empty() )
 		cout << "The statement cannot be constructively proven from the axioms." << endl;
 	else for( auto step : proof3 )
+		cout << step << endl;
+
+	cout << "---------------------------------" << endl;
+
+	cout << "Prove equivalence 4 from 12,13:" << endl;
+	auto proof4 = equi4.prove( {equi12,equi13} );
+	if( proof4.empty() )
+		cout << "The statement cannot be constructively proven from the axioms." << endl;
+	else for( auto step : proof4 )
+		cout << step << endl;
+
+	cout << "---------------------------------" << endl;
+
+	cout << "Prove equivalence 11 from 9,10:" << endl;
+	auto proof5 = equi11.prove( {equi9,equi10} );
+	if( proof5.empty() )
+		cout << "The statement cannot be constructively proven from the axioms." << endl;
+	else for( auto step : proof5 )
 		cout << step << endl;
 
 	cout << "---------------------------------" << endl;

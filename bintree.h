@@ -4,11 +4,16 @@
 #include <vector>
 #include <map>
 #include <memory>
+#include <forward_list>
+#include <unordered_map>
+#include "union_find.h"
 
 #define ERROR_SYMBOL "?"
-#define VERBOSE_PROOF
+#define FREE_VARIABLE_OFFSET 26
+// #define VERBOSE_PROOF
 
 class binary_tree {
+	friend class substitution_rules;
 public:
 	struct node {
 		int id;
@@ -16,6 +21,7 @@ public:
 		int size;
 		node* child[2];
 		bool leaf() const;
+		bool constant() const;
 		bool grab( const node*, std::map<int,const node*>& ) const;
 		bool operator==( const node& other ) const;
 		bool operator!=( const node& other ) const;
@@ -26,7 +32,7 @@ public:
 		node* clone() const;
 		node* cascade();
 		node* clonesert( const node* where, node* what, int& ) const;
-		node* subsitute( const std::map<int,const node*>& substitution ) const;
+		node* subsitute( std::map<int,const node*>& substitution ) const;
 		void print( std::ostream& ) const;
 		static node* scan( std::istream& );
 		node();
@@ -91,10 +97,12 @@ public:
 	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
 	iterator rootitr();
 	iterator begin();
-	static iterator end();
+	const_iterator begin() const;
+	iterator end();
+	const_iterator end() const;
 	const_iterator crootitr() const;
 	const_iterator cbegin() const;
-	static const_iterator cend();
+	const_iterator cend() const;
 	bool operator==( const binary_tree& ) const;
 	bool operator!=( const binary_tree& ) const;
 	bool operator<( const binary_tree& ) const;
@@ -140,7 +148,30 @@ namespace std {
 	};
 }
 
+class substitution_rules {
+	size_t separator;
+	bool non_contradiction;
+	std::unordered_map<int,int> symbol_to_index[2];
+	std::vector<int> index_to_symbol;
+	std::vector<binary_tree> gcst;
+	std::vector<std::forward_list<int>> dep_graph;
+	std::vector<int> top_sort_mod_eq;
+	UF equivalences;
+public:
+	substitution_rules( const binary_tree& A, const binary_tree& B );
+	bool cycle_check( const binary_tree::node* A, const binary_tree::node* B );
+	void add_dep( int s, int id, const binary_tree::node* T );
+	void add_equivalence( int idA, int idB );
+	bool validate_dependency();
+	bool parallel_walk( int sa, const binary_tree::node* A, int sb, const binary_tree::node* B );
+	bool add_rule( int s, int id, const binary_tree::node* T );
+	const binary_tree& at( int s, int id ) const;
+	operator bool() const;
+};
+
 std::ostream& operator<<( std::ostream& os, const binary_tree& bt );
 std::istream& operator>>( std::istream& is, binary_tree& bt );
 std::ostream& operator<<( std::ostream& os, const subtree_equivalence& se );
 std::istream& operator>>( std::istream& is, subtree_equivalence& se );
+
+int get_free_variable();

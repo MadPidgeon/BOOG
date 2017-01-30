@@ -7,12 +7,224 @@
 #include <unordered_map>
 #include <queue>
 #include "bintree.h"
+#include "top_sort.h"
+
+
+// #define DEBUG
 
 using namespace std;
 
 // ******************
+// Bullshit
+// ******************
+ 
+substitution_rules::substitution_rules( const binary_tree& A, const binary_tree& B ) {
+	for( auto& X : A ) {
+		if( X.leaf() and ( not X.constant() ) and symbol_to_index[0].count( X.id ) == 0 ) {
+			symbol_to_index[0][X.id] = int( index_to_symbol.size() );
+			index_to_symbol.push_back( X.id );
+		}
+	}
+	separator = index_to_symbol.size();
+	for( const auto& X : B ) {
+		if( X.leaf() and ( not X.constant() ) and symbol_to_index[1].count( X.id ) == 0 ) {
+			symbol_to_index[1][X.id] = int( index_to_symbol.size() );
+			index_to_symbol.push_back( X.id );
+		}
+	}
+	cout << "Symbols(" << index_to_symbol.size() << "): ";
+	for( auto& X : index_to_symbol )
+		cout << X << " ";
+	cout << endl;
+
+	dep_graph.resize( index_to_symbol.size() );
+	equivalences.clear( index_to_symbol.size() );
+	gcst.resize( index_to_symbol.size() );
+	non_contradiction = true;
+	if( separator != 0 and separator != index_to_symbol.size() ) {
+		if( not cycle_check( &*A.crootitr(), &*B.crootitr() ) ) {
+			cerr << "Cycle check contradiction" << endl;
+			return;
+		}
+		if( not validate_dependency() ) {
+			cerr << "Validate dependency contradiction" << endl;
+			return;
+		}
+	} else {
+		cerr << "Nothing to verify" << endl;
+	}
+	cerr << "No cycles detected" << endl;
+	if( not parallel_walk( 0, &*A.crootitr(), 1, &*B.crootitr() ) ) {
+		cerr << "Substitution failed!" << endl;
+		return;
+	}
+	for( int x = 0; x < index_to_symbol.size(); ++x ) {
+		if( equivalences.find(x) == x and gcst[x].size() == 0 ) {
+			gcst[x] = binary_tree( new binary_tree::node( get_free_variable() ) );
+		}
+	}
+
+}
+
+const binary_tree& substitution_rules::at( int s, int id ) const {
+	return gcst.at(symbol_to_index[s].at(id));
+}
+
+substitution_rules::operator bool() const {
+	return non_contradiction;
+}
+
+// A and B are not interchangable
+bool substitution_rules::cycle_check( const binary_tree::node* A, const binary_tree::node* B ) {
+	cout << A->id << "," << B->id << endl;
+	if( A->leaf() ) {
+		if( B->leaf() ) {
+			if( A->constant() ) {
+				if( B->constant() ) {
+					if( A->id != B->id ) {
+						return non_contradiction = false;
+					}
+				} else {
+					add_dep( 1, B->id, A );
+				}
+			} else {
+				if( B->constant() ) {
+					add_dep( 0, A->id, B );
+				} else {
+					add_equivalence( A->id, B->id );
+				}
+			}
+		} else {
+			if( A->constant() ) {
+				return non_contradiction = false;
+			} else {
+				add_dep( 0, A->id, B );
+			}
+		}
+	} else {
+		cout << B->leaf() << endl;
+		if( B->leaf() ) {
+			if( B->constant() ) {
+				return non_contradiction = false;
+			} else {
+				add_dep( 1, B->id, A );
+			}
+		} else {
+			if( A->id == B->id ) {
+				return cycle_check( A->child[0], B->child[0] ) && cycle_check( A->child[1], B->child[1] );
+			} else {
+				return non_contradiction = false;
+			}
+		}
+	}
+	// cout << "DONE~" <<endl;
+	return true;
+}
+
+bool substitution_rules::validate_dependency() {
+	for( size_t x = 0; x < equivalences.size(); ++x ) {
+		size_t y = equivalences.find( int(x) );
+		if( x != y )
+			dep_graph[y].splice_after( dep_graph[y].before_begin(), dep_graph[x] );
+	}
+	top_sort_mod_eq = topological_sort( dep_graph );
+	return non_contradiction = ( top_sort_mod_eq.size() != 0 );
+}
+
+void substitution_rules::add_equivalence( int idA, int idB ) {
+	if( equivalences.cup( symbol_to_index[0][idA], symbol_to_index[1][idB] ) ) { // new equivalence
+		return;//
+	}
+}
+
+void substitution_rules::add_dep( int s, int id, const binary_tree::node* T ) {
+	cout << "Add dep:";
+	T->print(cout);
+	cout << endl; 
+	if( T->leaf() ) {
+		if( not T->constant() )
+			dep_graph[symbol_to_index[s][id]].push_front( symbol_to_index[not s][T->id] );
+	} else {
+		add_dep( s, id, T->child[0] );
+		add_dep( s, id, T->child[1] );
+	}
+}
+
+// A and B are iterchangable
+bool substitution_rules::parallel_walk( int sa, const binary_tree::node* A, int sb, const binary_tree::node* B ) {
+	cout << A->id << "," << B->id << endl;
+	if( A->leaf() ) {
+		if( B->leaf() ) {
+			if( A->constant() ) {
+				if( B->constant() ) {
+					if( A->id != B->id ) {
+						return non_contradiction = false;
+					}
+				} else {
+					return add_rule( sb, B->id, A );
+				}
+			} else {
+				if( B->constant() ) {
+					return add_rule( sa, A->id, B );
+				} else {
+					// return add_equivalence( A->id, B->id );
+				}
+			}
+		} else {
+			if( A->constant() ) {
+				return non_contradiction = false;
+			} else {
+				return add_rule( sa, A->id, B );
+			}
+		}
+	} else {
+		if( B->leaf() ) {
+			if( B->constant() ) {
+				return non_contradiction = false;
+			} else {
+				return add_rule( sb, B->id, A );
+			}
+		} else {
+			if( A->id == B->id ) {
+				return parallel_walk( sa, A->child[0], sb, B->child[0] ) && parallel_walk( sa, A->child[1], sb, B->child[1] );
+			} else {
+				return non_contradiction = false;
+			}
+		}
+	}
+	return true;
+}
+
+bool substitution_rules::add_rule( int s, int id, const binary_tree::node* T ) {
+	cout << "Add rule (" << s << "," << id << "): ";
+	T->print( cout );
+	cout << endl;
+	cout << "GCST: ";
+	for( int i = 0; i < index_to_symbol.size(); ++i )
+		cout << gcst[i] << " ";
+	cout << endl;
+	cout << "Or:" << symbol_to_index[s][id] << endl;
+	size_t x = equivalences.find( symbol_to_index[s][id] );
+	cout << "Eq:" << x << endl;
+	if( gcst[x].size() == 0 ) {
+		gcst[x] = binary_tree( T->clone() );
+		return true;
+	} else {
+		non_contradiction = parallel_walk( s, T, x >= separator, &*gcst[x].crootitr() );
+		if( not non_contradiction )
+			cout << "WATAW" << endl;
+		return non_contradiction;
+	}
+}
+
+// ******************
 // Magic
 // ******************
+
+int get_free_variable() {
+	static int F = FREE_VARIABLE_OFFSET;
+	return F++;
+}
 
 class sizecomp {
 public:
@@ -55,7 +267,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 						#ifdef DEBUG
 						cout << "Res: " << Y << endl;
 						#endif
-						
+
 						master[Y] = X;
 						if( Y == second() ) {
 							while( true ) {
@@ -106,6 +318,10 @@ bool binary_tree::node::leaf() const {
 	return child[0] == nullptr and child[1] == nullptr;
 }
 
+bool binary_tree::node::constant() const {
+	return leaf() and id < 0; // leaf perhaps not required
+}
+
 /*binary_tree::node* binary_tree::node::cascade() {
 	if( child[0] ) delete child[0]->cascade();
 	if( child[1] ) delete child[1]->cascade();
@@ -113,8 +329,12 @@ bool binary_tree::node::leaf() const {
 }*/
 
 bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
-	if( rule->height > height )
+	if( leaf() and not rule->leaf() ) {
 		return false;
+	}
+
+	//if( rule->height > height ) // rephrase
+	//	return false;
 	if( rule->child[0] and child[0] and not child[0]->grab( rule->child[0], result ) )
 		return false;
 	if( rule->child[1] and child[1] and not child[1]->grab( rule->child[1], result ) )
@@ -136,14 +356,98 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 	return true;
 }
 
-binary_tree::node* binary_tree::node::subsitute( const map<int,const binary_tree::node*>& substitution ) const {
+//***** MERGING *****//
+//    #      #   ->  #
+//  a  t0  t1 b    a  b
+//*******************//
+/*
+binary_tree::node* binary_tree::node::join( binary_tree::node* other, int sub_offset ) {
+	node *a, *b;
+	if( leaf() == other->leaf() ) {
+		if( id == other->id ) {
+			if( leaf() )
+				return new node( id );
+			a = child[0]->join( other->child[0] );
+			b = child[1]->join( other->child[1] );
+			if( a == nullptr or b == nullptr )
+				return nullptr;
+			return new node( id, a, b );
+		}
+		return false;
+	}
+	if( leaf() )
+		a = this, b = other;
+	else
+		a = other, b = this;
+	if( a->id >= sub_offset ) {
+
+	}
+}
+
+
+
+bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
+	if( rule->leaf() ) {
+		if( rule->id < 0 ) { // constant
+			if( not leaf() )
+				return false;
+			if( rule->id != id ) {
+				if( id >= FREE_VARIABLE_OFFSET ) {
+					if( result.count( id ) ) 
+						return result[id]->merge( rule );
+					result[id] = rule;
+				}
+			}
+		}
+	}
+
+	return true;
+
 	if( leaf() ) {
-		if( id < 0 )
+		if( rule->leaf() ) {
+			if( id >= FREE_VARIABLE_OFFSET ) { // free variable
+				cerr << "FREE VARIABLE PANIC!!" << endl;
+				throw;
+			} else
+				return 0;
+		}
+	} else {
+
+	}
+
+	//if( rule->height > height ) // rephrase
+	//	return false;
+	if( rule->child[0] and child[0] and not child[0]->grab( rule->child[0], result ) )
+		return false;
+	if( rule->child[1] and child[1] and not child[1]->grab( rule->child[1], result ) )
+		return false;
+	if( rule->leaf() ) {
+		if( rule->id < 0 ) { // constant
+			if( leaf() ) {
+				if( rule->id == id )
+					return true;
+				// TODO: force (this) variable to constant
+			}
+			return false;
+		} else { // variable
+			if( result.count( rule->id ) )
+				return *result[rule->id] == *this;
+			result[rule->id] = this;
+		}
+	}
+	return true;
+}*/
+
+binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node*>& substitution ) const {
+	if( leaf() ) {
+		if( id < 0 ) // constant
 			return new node( id );
-		else if( substitution.count(id) ) 
+		else if( substitution.count(id) ) // bound variable 
 			return substitution.at(id)->clone();
-		else
-			throw;
+		else { // free variable
+			substitution[id] = new node( get_free_variable() );
+			return substitution[id]->clone();
+		}
 	} else
 		return new node( child[0]->subsitute( substitution ), child[1]->subsitute( substitution ), id );
 }
@@ -261,8 +565,17 @@ binary_tree::iterator binary_tree::begin() {
 	return iterator( root.get() );
 }
 
+binary_tree::const_iterator binary_tree::begin() const{
+	return const_iterator( root.get(), false );
+}
+
+
 binary_tree::iterator binary_tree::end() {
 	return iterator();
+}
+
+binary_tree::const_iterator binary_tree::end() const {
+	return const_iterator();
 }
 
 binary_tree::iterator binary_tree::rootitr() {
@@ -330,7 +643,7 @@ binary_tree::const_iterator binary_tree::cbegin() const {
 	return const_iterator( root.get(), false );
 }
 
-binary_tree::const_iterator binary_tree::cend() {
+binary_tree::const_iterator binary_tree::cend() const {
 	return const_iterator();
 }
 
