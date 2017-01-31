@@ -3,6 +3,7 @@
 
 struct UF : private std::vector<int> {
 	using std::vector<int>::size;
+	using std::vector<int>::operator[];
 	using std::vector<int>::begin;
 	using std::vector<int>::end;
 	int find( int s );

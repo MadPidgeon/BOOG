@@ -151,21 +151,26 @@ namespace std {
 class substitution_rules {
 	size_t separator;
 	bool non_contradiction;
-	std::unordered_map<int,int> symbol_to_index[2];
+	std::vector<bool> busy;
+	std::unordered_map<int,int> symbol_to_index;
+	//std::unordered_map<int,int> symbol_to_index[2];
 	std::vector<int> index_to_symbol;
 	std::vector<binary_tree> gcst;
 	std::vector<std::forward_list<int>> dep_graph;
-	std::vector<int> top_sort_mod_eq;
+	std::vector<int> top_sort;
 	UF equivalences;
 public:
 	substitution_rules( const binary_tree& A, const binary_tree& B );
+	binary_tree::node* intersect( const binary_tree::node* A, const binary_tree::node* B );
 	bool cycle_check( const binary_tree::node* A, const binary_tree::node* B );
-	void add_dep( int s, int id, const binary_tree::node* T );
-	void add_equivalence( int idA, int idB );
+	void add_dep( int index, const binary_tree::node* T );
+	//void add_equivalence( int idA, int idB );
 	bool validate_dependency();
 	bool parallel_walk( int sa, const binary_tree::node* A, int sb, const binary_tree::node* B );
-	bool add_rule( int s, int id, const binary_tree::node* T );
-	const binary_tree& at( int s, int id ) const;
+	//bool add_rule( int s, int id, const binary_tree::node* T );
+	bool add_equivalence( int sa, int sb );
+	bool add_rule( int symbol, const binary_tree::node* T );
+	const binary_tree& at( int symbol ) const;
 	operator bool() const;
 };
 
