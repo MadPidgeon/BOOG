@@ -19,7 +19,7 @@ using namespace std;
 // ******************
 
 binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, const binary_tree::node* B ) {
-	cout << "Intersect: " << A->id << " " << B->id << endl; 
+	// cout << "Intersect: " << A->id << " " << B->id << endl; 
 	// ---------
 	// both constant
 	if( A->constant() and B->constant() ) { 
@@ -56,7 +56,7 @@ binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, co
 }
 
 bool substitution_rules::add_equivalence( int as, int bs ) {
-	cout << "Add equivalence: " << char(as+'a'/*fix*/) << " = " << char(bs+'a') << endl;
+	// cout << "Add equivalence: " << char(as+'a'/*fix*/) << " = " << char(bs+'a') << endl;
 	// ---------------
 	int ai = equivalences.find( symbol_to_index[as] );
 	int bi = equivalences.find( symbol_to_index[bs] );
@@ -82,9 +82,9 @@ bool substitution_rules::add_equivalence( int as, int bs ) {
 }
 
 bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
-	cout << "Add rule: " << char(symbol+'a'/*fix*/) << " => ";
+	/*cout << "Add rule: " << char(symbol+'a') << " => ";
 	T->print(cout);
-	cout << endl;
+	cout << endl;*/
 	// ----------
 	int index = equivalences[ symbol_to_index[symbol] ];
 	if( gcst[index].size() == 0 ) {
@@ -99,31 +99,33 @@ bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
 	return gcst[index] != nullptr;
 }
 
-substitution_rules::substitution_rules( const binary_tree& A, const binary_tree& B ) {
+substitution_rules::substitution_rules( const binary_tree::node* A, const binary_tree::node* B ) {
 	// set up translation table
 	for( const auto& Y : { A, B } ) {
-		for( auto& X : Y ) {
-			if( X.leaf() and ( not X.constant() ) and symbol_to_index.count( X.id ) == 0 ) {
-				symbol_to_index[X.id] = int( index_to_symbol.size() );
-				index_to_symbol.push_back( X.id );
+		for( binary_tree::const_iterator X( Y, false ); X != binary_tree::const_iterator( nullptr ); ++X ) {
+			if( X->leaf() and ( not X->constant() ) and symbol_to_index.count( X->id ) == 0 ) {
+				symbol_to_index[X->id] = int( index_to_symbol.size() );
+				index_to_symbol.push_back( X->id );
 			}
 		}
 	}
 	size_t n = index_to_symbol.size();
-	cout << "Symbols(" << n << "): ";
+	/*cout << "Symbols(" << n << "): ";
 	for( auto& X : index_to_symbol )
 		cout << X << " ";
-	cout << endl;
+	cout << endl;*/
 	// set up greatest common super trees
 	gcst.resize( n );
 	equivalences.clear( int(n) );
 	busy.resize( n, false );
-	binary_tree r( intersect( &*A.crootitr(), &*B.crootitr() ) );
+	// intersect A and B
+	binary_tree r( intersect( A, B ) );
 	non_contradiction = ( r.size() != 0 );
-	for( int x = 0; x < n; ++x ) {
+	/*for( int x = 0; x < n; ++x ) {
 		cout << char(index_to_symbol[x]+'a') << " = " << gcst[x] << endl;
-	}
-	if( non_contradiction ) {
+	}*/
+	if( non_contradiction and n > 0) {
+		// validate dependencies
 		dep_graph.resize( n );
 		for( size_t i = 0; i < n; ++i ) {
 			if( equivalences[i] != int(i) )
@@ -132,20 +134,24 @@ substitution_rules::substitution_rules( const binary_tree& A, const binary_tree&
 				add_dep( i, &*gcst[i].crootitr() );
 			}
 		}
+		//cout << "TOPSORTING " << n << endl;
 		top_sort = topological_sort( dep_graph );
+		/*for( int x : top_sort )
+			cout << x << " ";
+		cout << endl;*/
 		non_contradiction = (top_sort.size() > 0);
-		cout << "Order: ";
+		/*cout << "Order: ";
 		for( int x : top_sort )
 			cout << char(x+'a') << " ";
-		cout << endl;
+		cout << endl;*/
 	}
-	cout << "Result: " << r << endl;
+	// cout << "Result: " << r << endl;
 }
 
 void substitution_rules::add_dep( int index, const binary_tree::node* T ) {
 	if( T->leaf() ) {
 		if( not T->constant() ) {
-			cout << "Add dependency: " << char(index_to_symbol[index]+'a') << " ~> " << char(T->id+'a') << endl;
+			//cout << "Add dependency: " << char(index_to_symbol[index]+'a') << " ~> " << char(T->id+'a') << endl;
 			dep_graph[index].push_front( symbol_to_index[T->id] );
 		}
 	} else {
@@ -153,57 +159,6 @@ void substitution_rules::add_dep( int index, const binary_tree::node* T ) {
 		add_dep( index, T->child[1] );
 	}
 }
-
-
-
-/*
-substitution_rules::substitution_rules( const binary_tree& A, const binary_tree& B ) {
-	for( auto& X : A ) {
-		if( X.leaf() and ( not X.constant() ) and symbol_to_index[0].count( X.id ) == 0 ) {
-			symbol_to_index[0][X.id] = int( index_to_symbol.size() );
-			index_to_symbol.push_back( X.id );
-		}
-	}
-	separator = index_to_symbol.size();
-	for( const auto& X : B ) {
-		if( X.leaf() and ( not X.constant() ) and symbol_to_index[1].count( X.id ) == 0 ) {
-			symbol_to_index[1][X.id] = int( index_to_symbol.size() );
-			index_to_symbol.push_back( X.id );
-		}
-	}
-	cout << "Symbols(" << index_to_symbol.size() << "): ";
-	for( auto& X : index_to_symbol )
-		cout << X << " ";
-	cout << endl;
-
-	dep_graph.resize( index_to_symbol.size() );
-	equivalences.clear( index_to_symbol.size() );
-	gcst.resize( index_to_symbol.size() );
-	non_contradiction = true;
-	if( separator != 0 and separator != index_to_symbol.size() ) {
-		if( not cycle_check( &*A.crootitr(), &*B.crootitr() ) ) {
-			cerr << "Cycle check contradiction" << endl;
-			return;
-		}
-		if( not validate_dependency() ) {
-			cerr << "Validate dependency contradiction" << endl;
-			return;
-		}
-	} else {
-		cerr << "Nothing to verify" << endl;
-	}
-	cerr << "No cycles detected" << endl;
-	if( not parallel_walk( 0, &*A.crootitr(), 1, &*B.crootitr() ) ) {
-		cerr << "Substitution failed!" << endl;
-		return;
-	}
-	for( int x = 0; x < index_to_symbol.size(); ++x ) {
-		if( equivalences.find(x) == x and gcst[x].size() == 0 ) {
-			gcst[x] = binary_tree( new binary_tree::node( get_free_variable() ) );
-		}
-	}
-
-}*/
 
 const binary_tree& substitution_rules::at( int symbol ) const {
 	return gcst.at(symbol_to_index.at(symbol));
@@ -213,193 +168,26 @@ substitution_rules::operator bool() const {
 	return non_contradiction;
 }
 
-/*
-// A and B are not interchangable
-bool substitution_rules::cycle_check( const binary_tree::node* A, const binary_tree::node* B ) {
-	cout << A->id << "," << B->id << endl;
-	if( A->leaf() ) {
-		if( B->leaf() ) {
-			if( A->constant() ) {
-				if( B->constant() ) {
-					if( A->id != B->id ) {
-						return non_contradiction = false;
-					}
-				} else {
-					add_dep( 1, B->id, A );
-				}
-			} else {
-				if( B->constant() ) {
-					add_dep( 0, A->id, B );
-				} else {
-					add_equivalence( A->id, B->id );
-				}
-			}
-		} else {
-			if( A->constant() ) {
-				return non_contradiction = false;
-			} else {
-				add_dep( 0, A->id, B );
-			}
-		}
-	} else {
-		cout << B->leaf() << endl;
-		if( B->leaf() ) {
-			if( B->constant() ) {
-				return non_contradiction = false;
-			} else {
-				add_dep( 1, B->id, A );
-			}
-		} else {
-			if( A->id == B->id ) {
-				return cycle_check( A->child[0], B->child[0] ) && cycle_check( A->child[1], B->child[1] );
-			} else {
-				return non_contradiction = false;
-			}
-		}
-	}
-	// cout << "DONE~" <<endl;
-	return true;
+binary_tree::node* substitution_rules::apply( const binary_tree::node* T ) {
+	if( not T->leaf() )
+		return new binary_tree::node( apply( T->child[0] ), apply( T->child[1] ), T->id );
+	if( T->constant() )
+		return new binary_tree::node( T->id );
+	if( symbol_to_index.count( T->id ) == 0 )
+		symbol_to_index[T->id] = -get_free_variable();
+	int y = symbol_to_index[T->id];
+	if( y < 0 )
+		return new binary_tree::node( -y );
+	int x = equivalences.find( y );
+	if( gcst[x].size() == 0 )
+		return new binary_tree::node( index_to_symbol[x] );
+	return apply( &*gcst[x].crootitr() );
 }
 
-bool substitution_rules::validate_dependency() {
-	for( size_t x = 0; x < equivalences.size(); ++x ) {
-		size_t y = equivalences.find( int(x) );
-		if( x != y )
-			dep_graph[y].splice_after( dep_graph[y].before_begin(), dep_graph[x] );
-	}
-	top_sort_mod_eq = topological_sort( dep_graph );
-	return non_contradiction = ( top_sort_mod_eq.size() != 0 );
+binary_tree::node* substitution_rules::apply( const binary_tree& T ) {
+	return apply( &*T.crootitr() );
 }
 
-void substitution_rules::add_equivalence( int idA, int idB ) {
-	if( equivalences.cup( symbol_to_index[0][idA], symbol_to_index[1][idB] ) ) { // new equivalence
-		return;//
-	}
-}
-
-void substitution_rules::add_dep( int s, int id, const binary_tree::node* T ) {
-	cout << "Add dep:";
-	T->print(cout);
-	cout << endl; 
-	if( T->leaf() ) {
-		if( not T->constant() )
-			dep_graph[symbol_to_index[s][id]].push_front( symbol_to_index[not s][T->id] );
-	} else {
-		add_dep( s, id, T->child[0] );
-		add_dep( s, id, T->child[1] );
-	}
-}
-
-// A and B are iterchangable
-bool substitution_rules::parallel_walk( int sa, const binary_tree::node* A, int sb, const binary_tree::node* B ) {
-	cout << A->id << "," << B->id << endl;
-	if( A->leaf() ) {
-		if( B->leaf() ) {
-			if( A->constant() ) {
-				if( B->constant() ) {
-					if( A->id != B->id ) {
-						return non_contradiction = false;
-					}
-				} else {
-					return add_rule( sb, B->id, A );
-				}
-			} else {
-				if( B->constant() ) {
-					return add_rule( sa, A->id, B );
-				} else {
-					// return add_equivalence( A->id, B->id );
-				}
-			}
-		} else {
-			if( A->constant() ) {
-				return non_contradiction = false;
-			} else {
-				return add_rule( sa, A->id, B );
-			}
-		}
-	} else {
-		if( B->leaf() ) {
-			if( B->constant() ) {
-				return non_contradiction = false;
-			} else {
-				return add_rule( sb, B->id, A );
-			}
-		} else {
-			if( A->id == B->id ) {
-				return parallel_walk( sa, A->child[0], sb, B->child[0] ) && parallel_walk( sa, A->child[1], sb, B->child[1] );
-			} else {
-				return non_contradiction = false;
-			}
-		}
-	}
-	return true;
-}
-
-bool substitution_rules::add_rule( int s, int id, const binary_tree::node* T ) {
-	cout << "Add rule (" << s << "," << id << "): ";
-	T->print( cout );
-	cout << endl;
-	cout << "GCST: ";
-	for( int i = 0; i < index_to_symbol.size(); ++i )
-		cout << gcst[i] << " ";
-	cout << endl;
-	cout << "Or:" << symbol_to_index[s][id] << endl;
-	size_t x = equivalences.find( symbol_to_index[s][id] );
-	cout << "Eq:" << x << endl;
-	if( gcst[x].size() == 0 ) {
-		gcst[x] = binary_tree( T->clone() );
-		return true;
-	} else {
-		non_contradiction = parallel_walk( s, T, x >= separator, &*gcst[x].crootitr() );
-		if( not non_contradiction )
-			cout << "WATAW" << endl;
-		return non_contradiction;
-	}
-}
-
-binary_tree::node* substitution_rules::intersect( int s, const binary_tree::node* A, const binary_tree::node* B ) {
-	if( A->leaf() ) {
-		if( B->leaf() ) {
-			if( A->constant() ) {
-				if( B->constant() ) {
-					if( A->id != B->id ) {
-						non_contradiction = false;
-						return nullptr;
-					}
-				} else {
-					return add_rule( sb, B->id, A );
-				}
-			} else {
-				if( B->constant() ) {
-					return add_rule( sa, A->id, B );
-				} else {
-					// return add_equivalence( A->id, B->id );
-				}
-			}
-		} else {
-			if( A->constant() ) {
-				return non_contradiction = false;
-			} else {
-				return add_rule( sa, A->id, B );
-			}
-		}
-	} else {
-		if( B->leaf() ) {
-			if( B->constant() ) {
-				return non_contradiction = false;
-			} else {
-				return add_rule( sb, B->id, A );
-			}
-		} else {
-			if( A->id == B->id ) {
-				return parallel_walk( sa, A->child[0], sb, B->child[0] ) && parallel_walk( sa, A->child[1], sb, B->child[1] );
-			} else {
-				return non_contradiction = false;
-			}
-		}
-	}
-	return true;
-}*/
 
 
 // ******************
@@ -507,12 +295,6 @@ bool binary_tree::node::constant() const {
 	return leaf() and id < 0; // leaf perhaps not required
 }
 
-/*binary_tree::node* binary_tree::node::cascade() {
-	if( child[0] ) delete child[0]->cascade();
-	if( child[1] ) delete child[1]->cascade();
-	return this;
-}*/
-
 bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
 	if( leaf() and not rule->leaf() ) {
 		return false;
@@ -525,7 +307,7 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 	if( rule->child[1] and child[1] and not child[1]->grab( rule->child[1], result ) )
 		return false;
 	if( rule->leaf() ) {
-		if( rule->id < 0 ) { // constant
+		if( rule->id < BOUND_VARIABLE_OFFSET ) { // constant
 			if( leaf() ) {
 				if( rule->id == id )
 					return true;
@@ -625,7 +407,7 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 
 binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node*>& substitution ) const {
 	if( leaf() ) {
-		if( id < 0 ) // constant
+		if( id < BOUND_VARIABLE_OFFSET ) // constant
 			return new node( id );
 		else if( substitution.count(id) ) // bound variable 
 			return substitution.at(id)->clone();
@@ -638,7 +420,12 @@ binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node
 }
 
 bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_tree::node* itr, binary_tree& res ) const {
-	return parent.transform( itr, side(i), side(not i), res );
+	// return parent.transform( itr, side(i), side(not i), res );
+	substitution_rules R( &*side(i).crootitr(), itr );
+	if( not R )
+		return false;
+	res = std::move( parent.clonesert( itr, R.apply( side(not i) ) ) );
+	return true;
 }
 
 bool binary_tree::transform( const binary_tree::node* pos, const binary_tree& from, const binary_tree& to, binary_tree& res ) const {
@@ -860,12 +647,15 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 	} else if( isalpha( c ) ) {
 		is.get();
 		is >> ws;
-		return new node( tolower( c ) - 'a' );
+		if( islower( c ) )
+			return new node( c - 'a' + BOUND_VARIABLE_OFFSET );
+		else
+			return new node( c - 'A' + AXIOMATIC_VARIABLE_OFFSET );
 	} else if( isdigit( c ) ) {
 		int id;
 		is >> id;
 		is >> ws;
-		return new node( -id-1 );
+		return new node( BOUND_VARIABLE_OFFSET-id-1 );
 	} else {
 		throw;
 	}
@@ -873,12 +663,14 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 
 void binary_tree::node::print( ostream& os ) const {
 	if( not child[0] and not child[1] ) {
-		if( id < 0 )
-			os << (-id-1);
-		else if( id < 26 )
-			os << char( 'a' + id );
+		if( id < BOUND_VARIABLE_OFFSET )
+			os << ( BOUND_VARIABLE_OFFSET - id - 1 );
+		else if( id < AXIOMATIC_VARIABLE_OFFSET )
+			os << char( 'a' + id - BOUND_VARIABLE_OFFSET );
+		else if( id < FREE_VARIABLE_OFFSET ) 
+			os << char( 'A' + id - AXIOMATIC_VARIABLE_OFFSET );
 		else
-			os << "t" << (id-26);
+			os << "t" << ( id-FREE_VARIABLE_OFFSET );
 	} else {
 		os << "(";
 		if( not child[0] )

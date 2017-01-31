@@ -10,6 +10,8 @@
 
 #define ERROR_SYMBOL "?"
 #define FREE_VARIABLE_OFFSET 26
+#define AXIOMATIC_VARIABLE_OFFSET 0
+#define BOUND_VARIABLE_OFFSET -26
 // #define VERBOSE_PROOF
 
 class binary_tree {
@@ -149,7 +151,7 @@ namespace std {
 }
 
 class substitution_rules {
-	size_t separator;
+	//size_t separator;
 	bool non_contradiction;
 	std::vector<bool> busy;
 	std::unordered_map<int,int> symbol_to_index;
@@ -160,7 +162,7 @@ class substitution_rules {
 	std::vector<int> top_sort;
 	UF equivalences;
 public:
-	substitution_rules( const binary_tree& A, const binary_tree& B );
+	substitution_rules( const binary_tree::node* A, const binary_tree::node* B );
 	binary_tree::node* intersect( const binary_tree::node* A, const binary_tree::node* B );
 	bool cycle_check( const binary_tree::node* A, const binary_tree::node* B );
 	void add_dep( int index, const binary_tree::node* T );
@@ -170,6 +172,8 @@ public:
 	//bool add_rule( int s, int id, const binary_tree::node* T );
 	bool add_equivalence( int sa, int sb );
 	bool add_rule( int symbol, const binary_tree::node* T );
+	binary_tree::node* apply( const binary_tree::node* T );
+	binary_tree::node* apply( const binary_tree& T );
 	const binary_tree& at( int symbol ) const;
 	operator bool() const;
 };
