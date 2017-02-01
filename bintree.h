@@ -147,6 +147,7 @@ public:
 	subtree_equivalence( std::string );
 	subtree_equivalence( const subtree_equivalence& );
 	subtree_equivalence( subtree_equivalence&& );
+	subtree_equivalence() = default;
 	~subtree_equivalence() = default;
 };
 

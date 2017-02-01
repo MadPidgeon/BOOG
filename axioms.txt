@@ -1,0 +1,15 @@
+commutativity+		(A+B)=(B+A)
+commutativity*		(A*B)=(B*A)
+associativity+		(A+(B+C))=((A+B)+C)
+associativity*		(A*(B*C))=((A*B)*C)
+left_distributivity	(A*(B+C))=((A*B)+(A*C))
+right_distributivity	((A+B)*C)=((A*C)+(B*C))
+left_unit+		(0+A)=A
+right_unit+		(A+0)=A
+left_unit*		(1*A)=A
+right_unit*		(A*1)=A
+right_cycling+		(A+(B+C))=(C+(A+B))
+left_cycling+		((A+B)+C)=((C+A)+B)
+contradiction		A=B
+nameless1		(A+(A+B))=A
+nameless2		((B+A)+A)=A

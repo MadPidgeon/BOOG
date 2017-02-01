@@ -6,8 +6,11 @@ OBJS = $(SRCS:.cc=.o)
 
 all: $(TARGET)
 
-test: gcst_test.cc bintree.o union_find.o
+gcst: gcst_test.cc bintree.o union_find.o
 	$(CC) $(CFLAGS) -o gcst gcst_test.cc bintree.o union_find.o
+
+proof: proof_test.cc bintree.o union_find.o
+	$(CC) $(CFLAGS) -o proof proof_test.cc bintree.o union_find.o
 
 clean:
 	$(RM) *.o *~ $(TARGET)

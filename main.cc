@@ -1,150 +1,75 @@
 #include <iostream>
+#include <fstream>
 #include <vector>
+#include <unordered_map>
+#include <string>
+#include <iomanip>
 #include "bintree.h"
-#include "counter.h"
+
 using namespace std;
 
 int main() {
-	subtree_equivalence axiom1("(A+A)=A");
-	cout << "Equivalence 1: " << axiom1 << endl;
+	// usage
+	cout << "Please input the variables in axioms.txt as capital letters." << endl;
+	cout << "You may use the characters 0,...,9 for constants." << endl;
+	cout << "The characters for which ispunct returns true and that are not parenthesis may be used as operators." << endl;
+	cout << "These operators are considered distinct, and multiple may be used in a single axiom." << endl;
+	cout << "Each operator requires a corresponding pair of parenthesis." << endl << endl;
 
-	subtree_equivalence axiom2("((A+B)+C)=((B+C)+A)");
-	cout << "Equivalence 2: " << axiom1 << endl;
-
-	subtree_equivalence equi3("(a+b)=(b+a)");
-	cout << "Equivalence 3: " << equi3 << endl;
-
-	subtree_equivalence axiom4("((A+B)+C)=(A+(B+C))");
-	cout << "Equivalence 4: " << axiom4 << endl;
-
-	subtree_equivalence equi4("((a+b)+c)=(a+(b+c))");
-	cout << "Equivalence 4: " << equi4 << endl;
-
-	subtree_equivalence axiom5("(A+0)=A");
-	cout << "Equivalence 5: " << axiom5 << endl;
-
-	subtree_equivalence axiom6("(0+A)=A");
-	cout << "Equivalence 6: " << axiom6 << endl;
-
-	subtree_equivalence axiom7("((A+B)+C)=(C+(B+A))");
-	cout << "Equivalence 7: " << axiom7 << endl;
-
-	subtree_equivalence equi8("(0+0)=0");
-	cout << "Equivalence 8: " << equi8 << endl;
-
-	subtree_equivalence axiom9("(0*A)=0");
-	cout << "Equivalence 9: " << axiom9 << endl;
-
-	subtree_equivalence axiom10("(0*(1/0))=1");
-	cout << "Equivalence 10: " << axiom10 << endl;
-
-	subtree_equivalence equi11("0=1");
-	cout << "Equivalence 11: " << equi11 << endl;
-
-	subtree_equivalence axiom12("A=(A+(A+B))");
-	cout << "Equivalence 12: " << axiom12 << endl;
-
-	subtree_equivalence axiom13("A=((B+A)+A)");
-	cout << "Equivalence 13: " << axiom13 << endl;
-
-	cout << "---------------------------------" << endl;
-
-	binary_tree statement("(a+b)");
-	cout << "Statement 1: " << statement << endl;
-	cout << "Statement 1 hashing: ";
-	statement.hash_print( cout );
+	// read data
+	std::unordered_map<std::string,subtree_equivalence> axioms;
+	std::string s;
+	ifstream in( "axioms.txt" );
+	cout << "Known axioms:" << endl;
+	while( not in.eof() ) {
+		in >> s >> ws;
+		in >> axioms[s] >> ws;
+		cout << setw(28) << left << s << " " << axioms[s] << endl;
+	}
 	cout << endl;
 
-	cout << "---------------------------------" << endl;
-
-	binary_tree statement2("(A*B)");
-	binary_tree statement3("(B*C)");
-	cout << "Statement 2: " << statement2 << endl;
-	cout << "Statement 3: " << statement3 << endl;
-	cout << "Statement 2 hashing: ";
-	statement2.hash_print( cout );
+	// pick axioms
+	std::vector<subtree_equivalence> premises;
+	cout << "Enter the names of the axioms you want to use, separated by a newline." << endl;
+	cout << "Enter an empty line to continue." << endl;
+	while( true ) {
+		cout << ">";
+		getline( cin, s );
+		if( s.empty() )
+			break;
+		if( axioms.count( s ) == 0 ) {
+			cout << "Unknown axiom \"" << s << "\"!" << endl;
+			continue;
+		}
+		premises.push_back( axioms[s] );
+	}
 	cout << endl;
-	cout << "Statement 3 hashing: ";
-	statement3.hash_print( cout );
+
+	// enter provable statement
+	subtree_equivalence input;
+	cout << "Now enter the statement you want to prove." << endl;
+	cout << "Use lower case characters for variables." << endl << ">";
+	cin >> input;
 	cout << endl;
-	cout << "Equal: " << (statement2==statement3) << endl;
-	binary_tree::comparator CMP;
-	cout << "Equivalent: " << CMP( statement2, statement3 ) << endl;
 
-	/*cout << "---------------------------------" << endl;
-
-	binary_tree result;
-	cout << "Apply equivalence 1 to statement 1: " << endl;
-	cout << ( axiom1.apply( 1, statement, statement.crootitr(), result ) ? "Succesful" : "Failure" ) << endl;
-	cout << result << endl;
-
-	cout << "---------------------------------" << endl;
-
-	cout << "Prove equivalence 3 from 1 and 2:" << endl;
-	auto proof1 = equi3.prove( {axiom1,axiom2} );
-	if( proof1.empty() )
-		cout << "The statement cannot be constructively proven from the axioms." << endl;
-	else for( auto step : proof1 )
-		cout << step << endl;
-
-	cout << "---------------------------------" << endl;
-
-	cout << "Prove equivalence 3 from 5, 6 and 7:" << endl;
-	auto proof2 = equi3.prove( {axiom5,axiom6,axiom7} );
-	if( proof2.empty() )
-		cout << "The statement cannot be constructively proven from the axioms." << endl;
-	else for( auto step : proof2 )
-		cout << step << endl;
-
-	cout << "---------------------------------" << endl;
-
-	cout << "Prove equivalence 8 from 5:" << endl;
-	auto proof3 = equi8.prove( {axiom5} );
-	if( proof3.empty() )
-		cout << "The statement cannot be constructively proven from the axioms." << endl;
-	else for( auto step : proof3 )
-		cout << step << endl;
-
-	cout << "---------------------------------" << endl;
-
-	cout << "Prove equivalence 11 from 9,10:" << endl;
-	auto proof5 = equi11.prove( {axiom9,axiom10} );
-	if( proof5.empty() )
-		cout << "The statement cannot be constructively proven from the axioms." << endl;
-	else for( auto step : proof5 )
-		cout << step << endl;
-*/
-	cout << "---------------------------------" << endl;
-
-	binary_tree statementX( "((Q+(Q+R))+0)" );
-	binary_tree statementY( "(A+(A+B))" );
-	binary_tree statementZ( "A" );
-	auto itrX = statementX.begin();
-	cout << itrX->id << endl;
-	substitution_rules Rulez( &*itrX, &*statementY.crootitr() );
-	auto Resultz = Rulez.apply( &*statementZ.crootitr() );
-	Resultz->print( cout );
-	cout<<endl;
-
-
-	cout << "---------------------------------" << endl;
-
-	cout << "Prove equivalence 11 from 12,13:" << endl;
-	auto proof4 = equi11.prove( {axiom12,axiom13} );
-	if( proof4.empty() )
-		cout << "The statement cannot be constructively proven from the axioms." << endl;
-	else for( auto step : proof4 )
-		cout << step << endl;
-
-	cout << "---------------------------------" << endl;
-
+	// compute
+	cout << "The program is now trying to prove the statement." << endl;
+	cout << "Termination of the program is not guaranteed." << endl;
+	cout << "Please close all your active programs, as this program requires a lot of RAM." << endl;
+	cout << "You can terminate the computation by pressing CTRL+C" << endl << endl;
+	auto proof = input.prove( premises );
 	
-
-	/*operator_table XOR( '+', {0,1,1,0} );
-	cout << XOR << endl << endl;
-
-	operator_table OR( '|', {0,1,1,1} );
-	cout << OR << endl;*/
+	// proof
+	cout << "Done!" << endl;
+	if( proof.size() == 0 ) {
+		cout << "The statement cannot be proven from the axioms." << endl;
+	} else {
+		cout << "The proof is as follows: " << endl;
+		cout << proof.back() << endl;
+		for( auto itr = proof.rbegin()+1; itr != proof.rend(); ++itr ) {
+			cout << "=" << (*itr) << endl;
+		}
+	}
 
 	return 0;
 }

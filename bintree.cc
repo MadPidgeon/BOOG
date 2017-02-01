@@ -694,7 +694,6 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 	} else if( isdigit( c ) ) {
 		int id;
 		is >> id;
-		is >> ws;
 		return new node( BOUND_VARIABLE_OFFSET-id-1 );
 	} else {
 		throw;
