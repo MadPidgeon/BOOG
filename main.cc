@@ -51,6 +51,25 @@ int main() {
 
 	binary_tree statement("(a+b)");
 	cout << "Statement 1: " << statement << endl;
+	cout << "Statement 1 hashing: ";
+	statement.hash_print( cout );
+	cout << endl;
+
+	cout << "---------------------------------" << endl;
+
+	binary_tree statement2("(A*B)");
+	binary_tree statement3("(B*C)");
+	cout << "Statement 2: " << statement2 << endl;
+	cout << "Statement 3: " << statement3 << endl;
+	cout << "Statement 2 hashing: ";
+	statement2.hash_print( cout );
+	cout << endl;
+	cout << "Statement 3 hashing: ";
+	statement3.hash_print( cout );
+	cout << endl;
+	cout << "Equal: " << (statement2==statement3) << endl;
+	binary_tree::comparator CMP;
+	cout << "Equivalent: " << CMP( statement2, statement3 ) << endl;
 
 	cout << "---------------------------------" << endl;
 
@@ -58,7 +77,6 @@ int main() {
 	cout << "Apply equivalence 1 to statement 1: " << endl;
 	cout << ( axiom1.apply( 1, statement, statement.crootitr(), result ) ? "Succesful" : "Failure" ) << endl;
 	cout << result << endl;
-	cin.get(); // temp
 
 	cout << "---------------------------------" << endl;
 

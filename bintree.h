@@ -36,6 +36,7 @@ public:
 		node* clonesert( const node* where, node* what, int& ) const;
 		node* subsitute( std::map<int,const node*>& substitution ) const;
 		void print( std::ostream& ) const;
+		void hash_print( std::ostream&, std::unordered_map<int,int>& ) const;
 		static node* scan( std::istream& );
 		node();
 		node( int );
@@ -86,6 +87,10 @@ public:
 		const_iterator( pointer, pointer );
 		const_iterator( const const_iterator& ) = default;
 	};
+	struct comparator {
+		bool operator()( const binary_tree&, const binary_tree& ) const;
+		bool cmp( const node*, const node*, std::unordered_map<int,int>&, std::unordered_map<int,int>& ) const;
+	};
 private:
 	std::shared_ptr<node> root;
 	mutable std::size_t _hash;
@@ -95,6 +100,7 @@ public:
 	size_t hash() const;
 	void scan( std::istream& );
 	void print( std::ostream& ) const;
+	void hash_print( std::ostream& ) const;
 	binary_tree clonesert( const node*, node* ) const;
 	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
 	iterator rootitr();

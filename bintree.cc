@@ -209,7 +209,7 @@ public:
 vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axioms ) const {
 	// ITERATORS CANNOT BE TRUSTED
 	// map<binary_tree,const binary_tree::const_iterator> master; // make unordered
-	map<binary_tree,binary_tree> master;
+	unordered_map<binary_tree,binary_tree,std::hash<binary_tree>,binary_tree::comparator> master;
 	priority_queue<binary_tree,vector<binary_tree>,sizecomp> todo;
 	todo.push( first() );
 	//master.insert( make_pair( first(), binary_tree::cend() ) );
@@ -686,6 +686,28 @@ void binary_tree::node::print( ostream& os ) const {
 	}
 }
 
+void binary_tree::node::hash_print( std::ostream& os, std::unordered_map<int,int>& table ) const {
+	if( leaf() ) {
+		if( constant() ) {
+			if( id >= BOUND_VARIABLE_OFFSET )
+				os << char( id - BOUND_VARIABLE_OFFSET + 'a' );
+			else
+				os << ( id - BOUND_VARIABLE_OFFSET + 1 );
+		}
+		else {
+			if( table.count( id ) == 0 )
+				table[id] = table.size();
+			os << table[id];
+		}
+	} else {
+		os << "(";
+		child[0]->hash_print( os, table );
+		os << char(id);
+		child[1]->hash_print( os, table );
+		os << ")";
+	}
+}
+
 void binary_tree::scan( istream& is ) {
 	root.reset( node::scan( is ) );
 }
@@ -694,6 +716,14 @@ void binary_tree::print( ostream& os ) const {
 	if( root )
 		root->print( os );
 	else
+		os << ERROR_SYMBOL;
+}
+
+void binary_tree::hash_print( ostream& os ) const {
+	if( root ) {
+		std::unordered_map<int,int> table;
+		root->hash_print( os, table );
+	} else
 		os << ERROR_SYMBOL;
 }
 
@@ -801,6 +831,31 @@ bool binary_tree::operator<=( const binary_tree& other ) const {
 	return not operator>( other );
 }
 
+bool binary_tree::comparator::operator()( const binary_tree& A, const binary_tree& B ) const {
+	if( A.root and B.root ) {
+		std::unordered_map<int,int> U,V;
+		return cmp( A.root.get(), B.root.get(), U, V );
+	}
+	return A.root == B.root;
+}
+
+bool binary_tree::comparator::cmp( const binary_tree::node* A, const binary_tree::node* B, std::unordered_map<int,int>& AtoB, std::unordered_map<int,int>& BtoA ) const {
+	if( A->leaf() != B->leaf() )
+		return false;
+	if( A->leaf() ) {
+		if( A->constant() != B->constant() )
+			return false;
+		if( A->constant() )
+			return A->id == B->id;
+		if( AtoB.count( A->id ) == 0 )
+			AtoB[A->id] = B->id;
+		if( BtoA.count( B->id ) == 0 )
+			BtoA[B->id] = A->id;
+		return AtoB[A->id] == B->id and BtoA[B->id] == A->id;
+	} 
+	return cmp( A->child[0], B->child[0], AtoB, BtoA ) and cmp( A->child[1], B->child[1], AtoB, BtoA );
+}
+
 // ******************
 // hashing
 // ******************
@@ -808,7 +863,7 @@ bool binary_tree::operator<=( const binary_tree& other ) const {
 size_t binary_tree::hash() const {
 	if( _hash == 0 and root ) {
 		ostringstream ss;
-		print( ss );
+		hash_print( ss );
 		_hash = std::hash<std::string>()( ss.str() );
 	}
 	return _hash;
@@ -875,8 +930,6 @@ binary_tree::binary_tree( binary_tree&& other ) {
 }
 
 binary_tree& binary_tree::operator=( const binary_tree& other ) {
-	/*if( root )
-		root->cascade();*/
 	root.reset( other.root ? other.root->clone() : nullptr );
 	_hash = other._hash;
 	return *this;
@@ -891,10 +944,8 @@ binary_tree& binary_tree::operator=( binary_tree&& other ) {
 }
 
 binary_tree::~binary_tree() {
-	if( root ) {
-		//root->cascade();
+	if( root )
 		root.reset();
-	}
 }
 
 subtree_equivalence::subtree_equivalence( string in ) {
