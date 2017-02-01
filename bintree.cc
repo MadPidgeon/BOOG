@@ -686,7 +686,6 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		return new node( a, b, op );
 	} else if( isalpha( c ) ) {
 		is.get();
-		is >> ws;
 		if( islower( c ) )
 			return new node( c - 'a' + BOUND_VARIABLE_OFFSET );
 		else
