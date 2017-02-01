@@ -71,7 +71,7 @@ int main() {
 	binary_tree::comparator CMP;
 	cout << "Equivalent: " << CMP( statement2, statement3 ) << endl;
 
-	cout << "---------------------------------" << endl;
+	/*cout << "---------------------------------" << endl;
 
 	binary_tree result;
 	cout << "Apply equivalence 1 to statement 1: " << endl;
@@ -113,6 +113,19 @@ int main() {
 		cout << "The statement cannot be constructively proven from the axioms." << endl;
 	else for( auto step : proof5 )
 		cout << step << endl;
+*/
+	cout << "---------------------------------" << endl;
+
+	binary_tree statementX( "((Q+(Q+R))+0)" );
+	binary_tree statementY( "(A+(A+B))" );
+	binary_tree statementZ( "A" );
+	auto itrX = statementX.begin();
+	cout << itrX->id << endl;
+	substitution_rules Rulez( &*itrX, &*statementY.crootitr() );
+	auto Resultz = Rulez.apply( &*statementZ.crootitr() );
+	Resultz->print( cout );
+	cout<<endl;
+
 
 	cout << "---------------------------------" << endl;
 

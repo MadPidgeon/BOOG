@@ -31,6 +31,7 @@ public:
 		bool operator>( const node& other ) const;
 		bool operator<=( const node& other ) const;
 		bool operator>=( const node& other ) const;
+		//bool derives( const node* other, std::unordered_map<int,const node*>& ) const;
 		node* clone() const;
 		node* cascade();
 		node* clonesert( const node* where, node* what, int& ) const;
@@ -103,6 +104,7 @@ public:
 	void hash_print( std::ostream& ) const;
 	binary_tree clonesert( const node*, node* ) const;
 	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
+	//bool derives( const binary_tree& ) const;
 	iterator rootitr();
 	iterator begin();
 	const_iterator begin() const;
@@ -161,6 +163,7 @@ class substitution_rules {
 	bool non_contradiction;
 	std::vector<bool> busy;
 	std::unordered_map<int,int> symbol_to_index;
+	std::vector<int> freedom;
 	//std::unordered_map<int,int> symbol_to_index[2];
 	std::vector<int> index_to_symbol;
 	std::vector<binary_tree> gcst;

@@ -10,7 +10,8 @@
 #include "top_sort.h"
 
 
-// #define DEBUG
+//#define DEBUG_PROVE
+//#define DEBUG_SUB
 
 using namespace std;
 
@@ -19,7 +20,9 @@ using namespace std;
 // ******************
 
 binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, const binary_tree::node* B ) {
-	// cout << "Intersect: " << A->id << " " << B->id << endl; 
+	#ifdef DEBUG_SUB
+	cout << "Intersect: " << A->id << " " << B->id << endl;
+	#endif
 	// ---------
 	// both constant
 	if( A->constant() and B->constant() ) { 
@@ -56,7 +59,9 @@ binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, co
 }
 
 bool substitution_rules::add_equivalence( int as, int bs ) {
-	// cout << "Add equivalence: " << char(as+'a'/*fix*/) << " = " << char(bs+'a') << endl;
+	#ifdef DEBUG_SUB
+	cout << "Add equivalence: " << char(as+'a'/*fix*/) << " = " << char(bs+'a') << endl;
+	#endif
 	// ---------------
 	int ai = equivalences.find( symbol_to_index[as] );
 	int bi = equivalences.find( symbol_to_index[bs] );
@@ -82,9 +87,11 @@ bool substitution_rules::add_equivalence( int as, int bs ) {
 }
 
 bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
-	/*cout << "Add rule: " << char(symbol+'a') << " => ";
+	#ifdef DEBUG_SUB
+	cout << "Add rule: " << char(symbol+'a') << " => ";
 	T->print(cout);
-	cout << endl;*/
+	cout << endl;
+	#endif
 	// ----------
 	int index = equivalences[ symbol_to_index[symbol] ];
 	if( gcst[index].size() == 0 ) {
@@ -100,6 +107,10 @@ bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
 }
 
 substitution_rules::substitution_rules( const binary_tree::node* A, const binary_tree::node* B ) {
+	// WARNING:
+	// ALWAYS PREFERS TO USE VARIABLES FROM A
+	// USE substitution_rules( statement, axiom1 ) with apply( axiom2 )
+
 	// set up translation table
 	for( const auto& Y : { A, B } ) {
 		for( binary_tree::const_iterator X( Y, false ); X != binary_tree::const_iterator( nullptr ); ++X ) {
@@ -110,10 +121,12 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 		}
 	}
 	size_t n = index_to_symbol.size();
-	/*cout << "Symbols(" << n << "): ";
+	#ifdef DEBUG_SUB
+	cout << "Symbols(" << n << "): ";
 	for( auto& X : index_to_symbol )
 		cout << X << " ";
-	cout << endl;*/
+	cout << endl;
+	#endif
 	// set up greatest common super trees
 	gcst.resize( n );
 	equivalences.clear( int(n) );
@@ -121,9 +134,11 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 	// intersect A and B
 	binary_tree r( intersect( A, B ) );
 	non_contradiction = ( r.size() != 0 );
-	/*for( int x = 0; x < n; ++x ) {
+	#ifdef DEBUG_SUB
+	for( int x = 0; x < n; ++x ) {
 		cout << char(index_to_symbol[x]+'a') << " = " << gcst[x] << endl;
-	}*/
+	}
+	#endif
 	if( non_contradiction and n > 0) {
 		// validate dependencies
 		dep_graph.resize( n );
@@ -136,16 +151,21 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 		}
 		//cout << "TOPSORTING " << n << endl;
 		top_sort = topological_sort( dep_graph );
-		/*for( int x : top_sort )
+		#ifdef DEBUG_SUB
+		for( int x : top_sort )
 			cout << x << " ";
-		cout << endl;*/
+		cout << endl;
+		#endif
 		non_contradiction = (top_sort.size() > 0);
 		/*cout << "Order: ";
 		for( int x : top_sort )
 			cout << char(x+'a') << " ";
 		cout << endl;*/
+		freedom.resize( index_to_symbol.size(), 0 );
 	}
-	// cout << "Result: " << r << endl;
+	#ifdef DEBUG_SUB
+	cout << "Result: " << r << endl;
+	#endif
 }
 
 void substitution_rules::add_dep( int index, const binary_tree::node* T ) {
@@ -176,11 +196,14 @@ binary_tree::node* substitution_rules::apply( const binary_tree::node* T ) {
 	if( symbol_to_index.count( T->id ) == 0 )
 		symbol_to_index[T->id] = -get_free_variable();
 	int y = symbol_to_index[T->id];
-	if( y < 0 )
+	if( y < 0 ) // free variable
 		return new binary_tree::node( -y );
 	int x = equivalences.find( y );
-	if( gcst[x].size() == 0 )
-		return new binary_tree::node( index_to_symbol[x] );
+	if( gcst[x].size() == 0 ) {
+		if( freedom[x] == 0 )
+			freedom[x] = get_free_variable();
+		return new binary_tree::node( freedom[x] );
+	}
 	return apply( &*gcst[x].crootitr() );
 }
 
@@ -220,29 +243,30 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 	while( not todo.empty() ) {
 		binary_tree X = move( todo.top() );
 		todo.pop();
-		#ifdef DEBUG
+		#ifdef DEBUG_PROVE
 		cout << "Tree: " << X << endl;
 		#endif
 
 		for( const auto& axiom : axioms ) {
-			#ifdef DEBUG
+			#ifdef DEBUG_PROVE
 			cout << "Axiom: " << axiom << endl;
 			#endif
 
 			for( const auto& N : X ) {
-				#ifdef DEBUG
+				#ifdef DEBUG_PROVE
 				cout << "Sub: "; N.print( cout ); cout << endl;
 				#endif
 
 				for( int i = 0; i < 2; ++i ) {
 					bool res = axiom.apply( i, X, &N, Y );
 					if( res and master.count( Y ) == 0 ) {
-						#ifdef DEBUG
+						#ifdef DEBUG_PROVE
 						cout << "Res: " << Y << endl;
 						#endif
 
 						master[Y] = X;
-						if( Y == second() ) {
+						substitution_rules R( &*Y.crootitr(), &*second().crootitr() );
+						if( R ) {
 							while( true ) {
 								auto result = master.find( Y );
 								proof.emplace_back( Y );
@@ -256,7 +280,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 				}
 			}
 		}
-		#ifdef DEBUG
+		#ifdef DEBUG_PROVE
 		cin.get();
 		#endif
 	}
@@ -322,6 +346,22 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 	}
 	return true;
 }
+
+/*
+bool binary_tree::derives( const binary_tree& other ) const {
+	if( root and other.root ) {
+		unordered_map<int,const binary_tree::node*> table;
+		return root->derives( other.root.get(), table );
+	}
+	return *root == *other.root;
+}
+
+bool derives( const node* other, std::unordered_map<int,const node*>& table ) const {
+	if( leaf() ) {
+
+	}
+	return child[0]->derives( other->child[0], table ) and child[1]->derives( other->child[1], table );
+}*/
 
 //***** MERGING *****//
 //    #      #   ->  #
@@ -421,7 +461,7 @@ binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node
 
 bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_tree::node* itr, binary_tree& res ) const {
 	// return parent.transform( itr, side(i), side(not i), res );
-	substitution_rules R( &*side(i).crootitr(), itr );
+	substitution_rules R( itr, &*side(i).crootitr() );
 	if( not R )
 		return false;
 	res = std::move( parent.clonesert( itr, R.apply( side(not i) ) ) );
