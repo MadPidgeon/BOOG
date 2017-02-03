@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <string>
 #include <iomanip>
+#include <limits>
 #include "bintree.h"
 #include "trie.h"
 
@@ -22,12 +23,19 @@ int main() {
 	std::string s, t;
 	trie names;
 	ifstream in( "axioms.txt" );
+	if( not in ) {
+		cout << "Could not open axioms.txt!" << endl;
+		return 1;
+	}
 	cout << "Known axioms:" << endl;
 	while( not in.eof() ) {
 		in >> s >> ws;
+		if( s[0] == '%' ) {
+			in.ignore(numeric_limits<streamsize>::max(),'\n');
+			continue;
+		}
 		names.insert( s );
 		in >> axioms[s] >> ws;
-		//cout << setw(28) << left << s << " " << axioms[s] << endl;
 	}
 	cout << left;
 	for( const auto& p : axioms )

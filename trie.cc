@@ -25,6 +25,8 @@ bool trie::node::expand( const char* s, std::string& r ) const {
 		r.push_back( d.first );
 		return d.second->expand( s + ( v == 1 ), r );
 	}
+	if( c.count(*s) == 0 )
+		return false;
 	r.push_back(*s);
 	return c.at(*s)->expand( s+1, r );
 }

@@ -188,6 +188,7 @@ public:
 	operator bool() const;
 };
 
+
 std::ostream& operator<<( std::ostream& os, const binary_tree& bt );
 std::istream& operator>>( std::istream& is, binary_tree& bt );
 std::ostream& operator<<( std::ostream& os, const subtree_equivalence& se );

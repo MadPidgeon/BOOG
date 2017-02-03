@@ -12,6 +12,7 @@
 
 //#define DEBUG_PROVE
 //#define DEBUG_SUB
+#define PROOF_TERMINATE 500000
 
 using namespace std;
 
@@ -23,7 +24,7 @@ binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, co
 	#ifdef DEBUG_SUB
 	cout << "Intersect: " << A->id << " " << B->id << endl;
 	#endif
-	// ---------
+
 	// both constant
 	if( A->constant() and B->constant() ) { 
 		if( A->id == B->id )
@@ -62,7 +63,7 @@ bool substitution_rules::add_equivalence( int as, int bs ) {
 	#ifdef DEBUG_SUB
 	cout << "Add equivalence: " << char(as+'a'/*fix*/) << " = " << char(bs+'a') << endl;
 	#endif
-	// ---------------
+
 	int ai = equivalences.find( symbol_to_index[as] );
 	int bi = equivalences.find( symbol_to_index[bs] );
 	if( busy[ai] or busy[bi] )
@@ -92,7 +93,7 @@ bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
 	T->print(cout);
 	cout << endl;
 	#endif
-	// ----------
+
 	int index = equivalences[ symbol_to_index[symbol] ];
 	if( gcst[index].size() == 0 ) {
 		gcst[index] = binary_tree( T->clone() );
@@ -230,16 +231,17 @@ public:
 };
 
 vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axioms ) const {
-	// ITERATORS CANNOT BE TRUSTED
-	// map<binary_tree,const binary_tree::const_iterator> master; // make unordered
 	unordered_map<binary_tree,binary_tree,std::hash<binary_tree>,binary_tree::comparator> master;
 	priority_queue<binary_tree,vector<binary_tree>,sizecomp> todo;
 	todo.push( first() );
-	//master.insert( make_pair( first(), binary_tree::cend() ) );
 	binary_tree empty_tree;
 	master[first()] = empty_tree;
 	vector<binary_tree> proof;
 	binary_tree Y;
+	#ifdef PROOF_TERMINATE
+	size_t terminator = PROOF_TERMINATE;
+	#endif
+
 	while( not todo.empty() ) {
 		binary_tree X = move( todo.top() );
 		todo.pop();
@@ -255,6 +257,12 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 			for( const auto& N : X ) {
 				#ifdef DEBUG_PROVE
 				cout << "Sub: "; N.print( cout ); cout << endl;
+				#endif
+
+				#ifdef PROOF_TERMINATE
+				--terminator;
+				if( terminator == 0 )
+					throw runtime_error("subtree_equivalence::prove has timed out!");
 				#endif
 
 				for( int i = 0; i < 2; ++i ) {
@@ -346,104 +354,6 @@ bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binar
 	}
 	return true;
 }
-
-/*
-bool binary_tree::derives( const binary_tree& other ) const {
-	if( root and other.root ) {
-		unordered_map<int,const binary_tree::node*> table;
-		return root->derives( other.root.get(), table );
-	}
-	return *root == *other.root;
-}
-
-bool derives( const node* other, std::unordered_map<int,const node*>& table ) const {
-	if( leaf() ) {
-
-	}
-	return child[0]->derives( other->child[0], table ) and child[1]->derives( other->child[1], table );
-}*/
-
-//***** MERGING *****//
-//    #      #   ->  #
-//  a  t0  t1 b    a  b
-//*******************//
-/*
-binary_tree::node* binary_tree::node::join( binary_tree::node* other, int sub_offset ) {
-	node *a, *b;
-	if( leaf() == other->leaf() ) {
-		if( id == other->id ) {
-			if( leaf() )
-				return new node( id );
-			a = child[0]->join( other->child[0] );
-			b = child[1]->join( other->child[1] );
-			if( a == nullptr or b == nullptr )
-				return nullptr;
-			return new node( id, a, b );
-		}
-		return false;
-	}
-	if( leaf() )
-		a = this, b = other;
-	else
-		a = other, b = this;
-	if( a->id >= sub_offset ) {
-
-	}
-}
-
-
-
-bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
-	if( rule->leaf() ) {
-		if( rule->id < 0 ) { // constant
-			if( not leaf() )
-				return false;
-			if( rule->id != id ) {
-				if( id >= FREE_VARIABLE_OFFSET ) {
-					if( result.count( id ) ) 
-						return result[id]->merge( rule );
-					result[id] = rule;
-				}
-			}
-		}
-	}
-
-	return true;
-
-	if( leaf() ) {
-		if( rule->leaf() ) {
-			if( id >= FREE_VARIABLE_OFFSET ) { // free variable
-				cerr << "FREE VARIABLE PANIC!!" << endl;
-				throw;
-			} else
-				return 0;
-		}
-	} else {
-
-	}
-
-	//if( rule->height > height ) // rephrase
-	//	return false;
-	if( rule->child[0] and child[0] and not child[0]->grab( rule->child[0], result ) )
-		return false;
-	if( rule->child[1] and child[1] and not child[1]->grab( rule->child[1], result ) )
-		return false;
-	if( rule->leaf() ) {
-		if( rule->id < 0 ) { // constant
-			if( leaf() ) {
-				if( rule->id == id )
-					return true;
-				// TODO: force (this) variable to constant
-			}
-			return false;
-		} else { // variable
-			if( result.count( rule->id ) )
-				return *result[rule->id] == *this;
-			result[rule->id] = this;
-		}
-	}
-	return true;
-}*/
 
 binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node*>& substitution ) const {
 	if( leaf() ) {
