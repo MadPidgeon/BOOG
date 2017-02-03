@@ -1,5 +1,4 @@
 *.o
 *.ign
-boog
-gcst
-proof
+bin/*
+obj/*

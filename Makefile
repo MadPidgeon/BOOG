@@ -1,27 +1,27 @@
-CC = g++
-CFLAGS = -Wall -Wextra -Wpedantic -Wconversion -fmax-errors=3 -std=c++14 -g
-TARGET = boog
+CXX = g++
+CXXFLAGS = -Wall -Wextra -Wpedantic -Wconversion -fmax-errors=3 -std=c++14 -g
+TARGET = bin/boog
 SRCS = bintree.cc main.cc counter.cc union_find.cc trie.cc
-OBJS = $(SRCS:.cc=.o)
+OBJS = $(SRCS:%.cc=obj/%.o)
 
 all: $(TARGET)
 
-gcst: gcst_test.cc bintree.o union_find.o
-	$(CC) $(CFLAGS) -o gcst gcst_test.cc bintree.o union_find.o
+bin/gcst: gcst_test.cc obj/bintree.o obj/union_find.o
+	$(CXX) $(CXXFLAGS) -o bin/gcst gcst_test.cc obj/bintree.o obj/union_find.o
 
-proof: proof_test.cc bintree.o union_find.o
-	$(CC) $(CFLAGS) -o proof proof_test.cc bintree.o union_find.o
+bin/proof: proof_test.cc obj/bintree.o obj/union_find.o
+	$(CXX) $(CXXFLAGS) -o bin/proof proof_test.cc obj/bintree.o obj/union_find.o
 
-trie: trie_test.cc trie.o
-	$(CC) $(CFLAGS) -o trie trie_test.cc trie.o
+bin/trie: trie_test.cc obj/trie.o
+	$(CXX) $(CXXFLAGS) -o bin/trie trie_test.cc obj/trie.o
 
 clean:
-	$(RM) *.o *~ $(TARGET)
+	$(RM) obj/*.o *~ bin/*
 
-.cc.o:
-	$(CC) $(CFLAGS) -c $< -o $@
+obj/%.o: %.cc
+	$(CXX) $(CXXFLAGS) -o $@ -c $< 
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
 
