@@ -1,0 +1,12 @@
+% -------------
+% To prove:
+% -------------
+
+% Associativity
+((a*b)*c)=(a*(b*c)) 
+
+% Right identity
+(a*1)=a
+
+% Right inverse
+(a*X)=1

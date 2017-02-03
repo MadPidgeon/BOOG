@@ -5,10 +5,29 @@
 #include <string>
 #include <iomanip>
 #include <limits>
+#include <dirent.h>
 #include "bintree.h"
 #include "trie.h"
 
 using namespace std;
+
+vector<string> getdir( string dir  ) {
+	DIR *dp;
+	vector<string> f;
+	struct dirent *dirp;
+	const string ext = ".txt";
+	if( (dp  = opendir( dir.c_str() ) ) == NULL)
+		throw runtime_error("Could not open directory \"" + dir +"\"!" );
+	while( (dirp = readdir( dp ) ) != NULL ) {
+		string s = dirp->d_name;
+		if( s.size() > 4 and equal( s.end()-4, s.end(), ext.begin() ) ) {
+			s.resize( s.size()-4 );
+			f.push_back( s );
+		}
+	}
+	closedir(dp);
+	return f;
+}
 
 int main() {
 	// usage
@@ -21,7 +40,7 @@ int main() {
 	// read data
 	std::map<std::string,subtree_equivalence> axioms;
 	std::string s, t;
-	trie names;
+	trie axiom_names;
 	ifstream in( "axioms.txt" );
 	if( not in ) {
 		cout << "Could not open axioms.txt!" << endl;
@@ -34,12 +53,12 @@ int main() {
 			in.ignore(numeric_limits<streamsize>::max(),'\n');
 			continue;
 		}
-		names.insert( s );
+		axiom_names.insert( s );
 		in >> axioms[s] >> ws;
 	}
 	cout << left;
 	for( const auto& p : axioms )
-		cout << setw(10) << names.compress(p.first) << " " << setw(28) << p.first << " " << p.second << endl;
+		cout << setw(10) << axiom_names.compress(p.first) << " " << setw(28) << p.first << " " << p.second << endl;
 	cout << endl;
 
 	// pick axioms
@@ -51,7 +70,7 @@ int main() {
 		getline( cin, s );
 		if( s.empty() )
 			break;
-		t = names.expand( s );
+		t = axiom_names.expand( s );
 		if( t == "" or axioms.count( t ) == 0 ) {
 			cout << "Unknown axiom \"" << s << "\"!" << endl;
 			continue;
@@ -60,8 +79,56 @@ int main() {
 	}
 	cout << endl;
 
-	// enter provable statement
+	// environment
 	subtree_equivalence input;
+	vector<binary_tree> proof; 
+	trie environment_names;
+	cout << "Enter one of the following proof packages or press enter to continue:" << endl;
+	auto environments = getdir( "proof_environment" );
+	for( const auto& s : environments )
+		environment_names.insert( s );
+	for( const auto& s : environments )
+		cout << setw(10) << environment_names.compress( s ) << " " << s << endl;
+	while( true ) {
+		cout << ">";
+		getline( cin, s );
+		if( s.empty() )
+			break;
+		t = environment_names.expand( s );
+		if( t != "" ) {
+			ifstream env( "proof_environment/" + t + ".txt" );
+			if( not env ) {
+				cout << "Error opening file \"" << t << "\"!" << endl;
+				return 1;
+			}
+			cout << endl << "The following properties will be validated:" << endl;
+			while( not env.eof() ) {
+				env >> ws;
+				if( env.peek() == '%' ) {
+					env.get();
+					env.ignore( numeric_limits<streamsize>::max(), '\n' );
+					continue;
+				}
+				env >> input >> ws;
+				cout << input << ": " << flush;
+				try {
+					proof = input.prove( premises );
+				} catch( ... ) {
+					cout << "Timeout" << endl;
+					continue;
+				}				
+				if( proof.size() == 0 )
+					cout << "Does not follow" << endl;
+				else
+					cout << "True" << endl;
+			}
+			return 0;
+		}
+		cout << "Unknown environment \"" << s << "\"" << endl;
+	}
+
+	// enter provable statement
+	cout << endl;
 	cout << "Now enter the statement you want to prove." << endl;
 	cout << "Use lower case characters for variables." << endl << ">";
 	cin >> input;
@@ -72,7 +139,7 @@ int main() {
 	cout << "Termination of the program is not guaranteed." << endl;
 	cout << "Please close all your active programs, as this program requires a lot of RAM." << endl;
 	cout << "You can terminate the computation by pressing CTRL+C" << endl << endl;
-	auto proof = input.prove( premises );
+	proof = input.prove( premises );
 	
 	// proof
 	cout << "Done!" << endl;

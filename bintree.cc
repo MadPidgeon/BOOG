@@ -315,7 +315,7 @@ binary_tree binary_tree::clonesert( const binary_tree::node* where, binary_tree:
 	int subs = 0;
 	auto R = root->clonesert( where, what, subs );
 	if( subs != 1 )
-		throw;
+		throw runtime_error("Multiple substitutions performed!");
 	return binary_tree( R );
 }
 
@@ -605,7 +605,7 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		is >> id;
 		return new node( BOUND_VARIABLE_OFFSET-id-1 );
 	} else {
-		throw;
+		throw runtime_error("Unexpected character '" + string( 1, c ) + "'!");
 	}
 }
 

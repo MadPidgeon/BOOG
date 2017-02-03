@@ -1,0 +1,12 @@
+% -------------
+% To prove:
+% -------------
+
+% Associativity
+((a*b)*c)=(a*(b*c)) 
+
+% Left identity
+(1*a)=a
+
+% Right inverse
+(X*a)=1
