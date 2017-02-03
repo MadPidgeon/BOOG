@@ -5,6 +5,7 @@
 #include <string>
 #include <iomanip>
 #include "bintree.h"
+#include "trie.h"
 
 using namespace std;
 
@@ -17,31 +18,37 @@ int main() {
 	cout << "Each operator requires a corresponding pair of parenthesis." << endl << endl;
 
 	// read data
-	std::unordered_map<std::string,subtree_equivalence> axioms;
-	std::string s;
+	std::map<std::string,subtree_equivalence> axioms;
+	std::string s, t;
+	trie names;
 	ifstream in( "axioms.txt" );
 	cout << "Known axioms:" << endl;
 	while( not in.eof() ) {
 		in >> s >> ws;
+		names.insert( s );
 		in >> axioms[s] >> ws;
-		cout << setw(28) << left << s << " " << axioms[s] << endl;
+		//cout << setw(28) << left << s << " " << axioms[s] << endl;
 	}
+	cout << left;
+	for( const auto& p : axioms )
+		cout << setw(10) << names.compress(p.first) << " " << setw(28) << p.first << " " << p.second << endl;
 	cout << endl;
 
 	// pick axioms
 	std::vector<subtree_equivalence> premises;
-	cout << "Enter the names of the axioms you want to use, separated by a newline." << endl;
+	cout << "Enter the abbreviation of the axioms you want to use, separated by a newline." << endl;
 	cout << "Enter an empty line to continue." << endl;
 	while( true ) {
 		cout << ">";
 		getline( cin, s );
 		if( s.empty() )
 			break;
-		if( axioms.count( s ) == 0 ) {
+		t = names.expand( s );
+		if( t == "" or axioms.count( t ) == 0 ) {
 			cout << "Unknown axiom \"" << s << "\"!" << endl;
 			continue;
 		}
-		premises.push_back( axioms[s] );
+		premises.push_back( axioms[t] );
 	}
 	cout << endl;
 
