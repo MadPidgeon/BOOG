@@ -12,7 +12,7 @@
 
 //#define DEBUG_PROVE
 //#define DEBUG_SUB
-#define PROOF_TERMINATE 500000
+#define PROOF_TERMINATE 5000000
 
 using namespace std;
 

@@ -63,6 +63,7 @@ int main() {
 
 	// pick axioms
 	std::vector<subtree_equivalence> premises;
+	size_t original_premise_count;
 	cout << "Enter the abbreviation of the axioms you want to use, separated by a newline." << endl;
 	cout << "Enter an empty line to continue." << endl;
 	while( true ) {
@@ -77,6 +78,7 @@ int main() {
 		}
 		premises.push_back( axioms[t] );
 	}
+	original_premise_count = premises.size();
 	cout << endl;
 
 	// environment
@@ -109,7 +111,27 @@ int main() {
 					env.ignore( numeric_limits<streamsize>::max(), '\n' );
 					continue;
 				}
+				if( env.peek() == '!' ) {
+					env.get();
+					if( env.eof() ) {
+						cout << "Unexpected end of file!" << endl;
+						return 1;
+					}
+					if( env.peek() == '~' ) {
+						env.get();
+						env >> ws;
+						premises.resize( original_premise_count );
+						continue;
+					}
+					env >> input >> ws;
+					premises.push_back( input );
+					continue;
+				}
 				env >> input >> ws;
+				for( size_t i = original_premise_count; i < premises.size()-1; ++i )
+					cout << premises.at(i) << ", ";
+				if( original_premise_count < premises.size() )
+					cout << premises.back() << " => ";
 				cout << input << ": " << flush;
 				try {
 					proof = input.prove( premises );

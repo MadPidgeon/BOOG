@@ -1,0 +1,17 @@
+% Define a <= b iff there exists an x such that (a*x)=b
+% We will validate that this is a partial order
+% It is important that none of the axioms contain X
+
+% reflexivity:
+(a*X)=a
+
+% anti-symmetry:
+! (a*c)=b
+! (b*d)=a
+a=b
+
+% transitivity
+!~
+! (a*u)=b
+! (b*v)=c
+(a*X)=c
