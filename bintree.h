@@ -105,6 +105,7 @@ public:
 	binary_tree clonesert( const node*, node* ) const;
 	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
 	//bool derives( const binary_tree& ) const;
+	const binary_tree::node* croot() const;
 	iterator rootitr();
 	iterator begin();
 	const_iterator begin() const;
@@ -128,6 +129,7 @@ public:
 	binary_tree& operator=( binary_tree&& );
 	~binary_tree();
 private:
+	
 	binary_tree( node* );
 };
 

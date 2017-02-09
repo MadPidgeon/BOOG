@@ -1,0 +1,69 @@
+% Opgave 1 
+% Zij S een verzameling reele getallen die gesloten is onder vermenigvuldiging. 
+% We schrijven S = T cup U met T cap U = empty. 
+% Veronderstel dat voor a,b,c in T geldt dat abc in T en dat voor a,b,c in U geldt dat abc in U. 
+% Bewijs dat tenminste een van de verzamelingen T en U gesloten is onder vermenigvuldiging.
+
+% ! (A*(B*C))=((A*B)*C)
+% ! (A*B)=(B*A)
+
+% Schrijf 0 voor de elementen uit T
+% Schrijf 1 voor de elementen uit U
+
+%! ((1*1)*1)=1
+%! 
+%! ((b*c)*d)=0
+
+%
+
+
+%! (1*1)=1
+%! (0*0)=0
+
+
+!~
+% Opgave 2 
+% Zij S een verzameling met daarop een binaire operatie *. 
+% Als voor alle a,b in S geldt (a*b)*a=b, bewijs dan dat a*(b*a)=b voor alle a,b in S.
+! ((A*B)*A)=B
+(a*(b*a))=b
+
+
+!~
+% Opgave 5
+% Laat * een binaire operatie zijn op een verzameling S, zo dat voor alle x,y in S geldt
+% - x*(x*y)=y;
+% - (y*x)*x=y;
+% Bewijs dat * commutatief is. Is * ook associatief?
+! (A*(A*B))=B
+! ((A*B)*B)=A
+(a*b)=(b*a)
+((a*b)*c)=(a*(b*c))
+
+!~
+% Opgave 6 
+% Zij S een verzameling en * een binaire operatie op S met
+% - x*x = x voor alle x in S;
+% - (x*y)*z=(y*z)*x voor alle x,y,z in S.
+% Bewijs dat * commutatief en associatief is
+! (A*A)=A
+! ((A*B)*C)=((B*C)*A)
+(a*b)=(b*a)
+! (A*B)=(B*A)
+((a*b)*c)=(a*(b*c))
+
+!~
+% Opgave 10 
+% Zij * een binaire operatie op R zo dat (a*b)*c=a+b+c voor alle a,b,c in R.
+% Bewijs dat a*b=a+b.
+! (A+B)=(B+A)
+! ((A+B)+C)=(A+(B+C))
+! A=(A+0)
+! (A*(B+C))=((A*B)+(A*C))
+! (A-A)=0
+! (A-B)=(A+(0-B))
+! ((A#B)#C)=((A+B)+C)
+(0#0)=0
+(a#b)=(a+b)
+
+

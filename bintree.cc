@@ -12,7 +12,7 @@
 
 //#define DEBUG_PROVE
 //#define DEBUG_SUB
-#define PROOF_TERMINATE 5000000
+#define PROOF_TERMINATE 1000000
 
 using namespace std;
 
@@ -78,7 +78,7 @@ bool substitution_rules::add_equivalence( int as, int bs ) {
 				if( equivalences[ai] != ai )
 					swap( ai, bi );
 				busy[bi] = busy[ai] = true;
-				gcst[ai] = binary_tree( intersect( &*gcst[ai].crootitr(), &*gcst[bi].crootitr() ) );
+				gcst[ai] = binary_tree( intersect( gcst[ai].croot(), gcst[bi].croot() ) );
 				gcst[bi] = binary_tree( nullptr );
 				busy[ai] = false;
 			}
@@ -102,7 +102,7 @@ bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
 	if( busy[index] )
 		return false;
 	busy[index] = true;
-	gcst[index] = binary_tree( intersect( &*gcst[index].crootitr(), T ) );
+	gcst[index] = binary_tree( intersect( gcst[index].croot(), T ) );
 	busy[index] = false;
 	return gcst[index] != nullptr;
 }
@@ -147,7 +147,7 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 			if( equivalences[i] != int(i) )
 				dep_graph[i].push_front( equivalences[i] );
 			else if( gcst[i].size() != 0 ) {
-				add_dep( i, &*gcst[i].crootitr() );
+				add_dep( i, gcst[i].croot() );
 			}
 		}
 		//cout << "TOPSORTING " << n << endl;
@@ -205,11 +205,11 @@ binary_tree::node* substitution_rules::apply( const binary_tree::node* T ) {
 			freedom[x] = get_free_variable();
 		return new binary_tree::node( freedom[x] );
 	}
-	return apply( &*gcst[x].crootitr() );
+	return apply( gcst[x].croot() );
 }
 
 binary_tree::node* substitution_rules::apply( const binary_tree& T ) {
-	return apply( &*T.crootitr() );
+	return apply( T.croot() );
 }
 
 
@@ -273,7 +273,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 						#endif
 
 						master[Y] = X;
-						substitution_rules R( &*Y.crootitr(), &*second().crootitr() );
+						substitution_rules R( Y.croot(), second().croot() );
 						if( R ) {
 							while( true ) {
 								auto result = master.find( Y );
@@ -370,8 +370,7 @@ binary_tree::node* binary_tree::node::subsitute( map<int,const binary_tree::node
 }
 
 bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_tree::node* itr, binary_tree& res ) const {
-	// return parent.transform( itr, side(i), side(not i), res );
-	substitution_rules R( itr, &*side(i).crootitr() );
+	substitution_rules R( itr, side(i).croot() );
 	if( not R )
 		return false;
 	res = std::move( parent.clonesert( itr, R.apply( side(not i) ) ) );
@@ -390,6 +389,10 @@ bool binary_tree::transform( const binary_tree::node* pos, const binary_tree& fr
 // ******************
 // Getters & Setters
 // ******************
+
+const binary_tree::node* binary_tree::croot() const {
+	return root.get();
+}
 
 binary_tree& subtree_equivalence::side( int i ) {
 	return tree[!!i];
@@ -589,10 +592,12 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		node* a = scan( is );
 		is >> ws;
 		int op = is.get();
-		assert( ispunct( op ) and op != '(' and op != ')' );
+		if( not( ispunct( op ) and op != '(' and op != ')' ) )
+			throw runtime_error("Expected operator instead of '" + string( 1, char(op) ) + "'!");
 		node* b = scan( is );
 		is >> ws;
-		assert( is.get() == ')' );
+		if( ( c = char( is.get() ) ) != ')' )
+			throw runtime_error("Expected closing bracket instead of '" + string( 1, c ) + "' is not an operator!");
 		return new node( a, b, op );
 	} else if( isalpha( c ) ) {
 		is.get();

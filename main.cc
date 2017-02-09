@@ -5,9 +5,12 @@
 #include <string>
 #include <iomanip>
 #include <limits>
+#include <sstream>
 #include <dirent.h>
 #include "bintree.h"
 #include "trie.h"
+
+#define ALWAYS_SHOW_PROOF
 
 using namespace std;
 
@@ -27,6 +30,74 @@ vector<string> getdir( string dir  ) {
 	}
 	closedir(dp);
 	return f;
+}
+
+void proof_print( const std::vector<binary_tree>& proof ) {
+	if( proof.size() > 0 ) {
+		cout << proof.back() << endl;
+		for( auto itr = proof.rbegin()+1; itr != proof.rend(); ++itr )
+			cout << "=" << (*itr) << endl;
+	} else
+		cout << "[No proof available]" << endl;
+}
+
+
+bool run_environment( string filename, vector<subtree_equivalence> premises ) {
+	size_t original_premise_count = premises.size();
+	vector<binary_tree> proof;
+	subtree_equivalence input;
+	ifstream env( "proof_environment/" + filename + ".txt" );
+	if( not env ) {
+		cout << "Error opening file \"" << filename << "\"!" << endl;
+		return 1;
+	}
+	cout << endl << "The following properties will be validated:" << endl;
+	while( not env.eof() ) {
+		env >> ws;
+		if( env.peek() == '%' ) {
+			env.get();
+			env.ignore( numeric_limits<streamsize>::max(), '\n' );
+			continue;
+		}
+		if( env.peek() == '!' ) {
+			env.get();
+			if( env.eof() ) {
+				cout << "Unexpected end of file!" << endl;
+				return 1;
+			}
+			if( env.peek() == '~' ) {
+				env.get();
+				env >> ws;
+				premises.resize( original_premise_count );
+				continue;
+			}
+			env >> input >> ws;
+			premises.push_back( input );
+			continue;
+		}
+		env >> input >> ws;
+		for( size_t i = original_premise_count; i < premises.size()-1; ++i )
+			cout << premises.at(i) << ", ";
+		if( original_premise_count < premises.size() )
+			cout << premises.back() << " => ";
+		cout << input << ": " << flush;
+		try {
+			proof = input.prove( premises );
+		} catch( ... ) {
+			cout << "Timeout" << endl;
+			continue;
+		}				
+		if( proof.size() == 0 )
+			cout << "Does not follow" << endl;
+		else {
+			#ifdef ALWAYS_SHOW_PROOF
+			proof_print( proof );
+			#else
+			cout << "True" << endl;
+			#endif
+		}
+	}
+	return 0;
 }
 
 int main() {
@@ -63,7 +134,6 @@ int main() {
 
 	// pick axioms
 	std::vector<subtree_equivalence> premises;
-	size_t original_premise_count;
 	cout << "Enter the abbreviation of the axioms you want to use, separated by a newline." << endl;
 	cout << "Enter an empty line to continue." << endl;
 	while( true ) {
@@ -71,19 +141,30 @@ int main() {
 		getline( cin, s );
 		if( s.empty() )
 			break;
-		t = axiom_names.expand( s );
-		if( t == "" or axioms.count( t ) == 0 ) {
-			cout << "Unknown axiom \"" << s << "\"!" << endl;
-			continue;
+		if( s.find_first_of('=') == std::string::npos ) {
+			t = axiom_names.expand( s );
+			if( t == "" or axioms.count( t ) == 0 ) {
+				cout << "Unknown axiom \"" << s << "\"!" << endl;
+				continue;
+			}
+			premises.push_back( axioms[t] );
+		} else {
+			try {
+				istringstream ss( s );
+				subtree_equivalence axiom;
+				ss >> axiom;
+				premises.push_back( std::move( axiom ) );
+			} catch( const std::exception& e ) {
+				cout << "Could not parse equivalence statement. Did you forget some brackets?" << endl;
+				cerr << "ERROR: " << e.what() << endl;
+				continue;
+			}
 		}
-		premises.push_back( axioms[t] );
 	}
-	original_premise_count = premises.size();
 	cout << endl;
 
 	// environment
 	subtree_equivalence input;
-	vector<binary_tree> proof; 
 	trie environment_names;
 	cout << "Enter one of the following proof packages or press enter to continue:" << endl;
 	auto environments = getdir( "proof_environment" );
@@ -97,55 +178,8 @@ int main() {
 		if( s.empty() )
 			break;
 		t = environment_names.expand( s );
-		if( t != "" ) {
-			ifstream env( "proof_environment/" + t + ".txt" );
-			if( not env ) {
-				cout << "Error opening file \"" << t << "\"!" << endl;
-				return 1;
-			}
-			cout << endl << "The following properties will be validated:" << endl;
-			while( not env.eof() ) {
-				env >> ws;
-				if( env.peek() == '%' ) {
-					env.get();
-					env.ignore( numeric_limits<streamsize>::max(), '\n' );
-					continue;
-				}
-				if( env.peek() == '!' ) {
-					env.get();
-					if( env.eof() ) {
-						cout << "Unexpected end of file!" << endl;
-						return 1;
-					}
-					if( env.peek() == '~' ) {
-						env.get();
-						env >> ws;
-						premises.resize( original_premise_count );
-						continue;
-					}
-					env >> input >> ws;
-					premises.push_back( input );
-					continue;
-				}
-				env >> input >> ws;
-				for( size_t i = original_premise_count; i < premises.size()-1; ++i )
-					cout << premises.at(i) << ", ";
-				if( original_premise_count < premises.size() )
-					cout << premises.back() << " => ";
-				cout << input << ": " << flush;
-				try {
-					proof = input.prove( premises );
-				} catch( ... ) {
-					cout << "Timeout" << endl;
-					continue;
-				}				
-				if( proof.size() == 0 )
-					cout << "Does not follow" << endl;
-				else
-					cout << "True" << endl;
-			}
-			return 0;
-		}
+		if( t != "" )
+			return run_environment( t, premises );
 		cout << "Unknown environment \"" << s << "\"" << endl;
 	}
 
@@ -160,8 +194,8 @@ int main() {
 	cout << "The program is now trying to prove the statement." << endl;
 	cout << "Termination of the program is not guaranteed." << endl;
 	cout << "Please close all your active programs, as this program requires a lot of RAM." << endl;
-	cout << "You can terminate the computation by pressing CTRL+C" << endl << endl;
-	proof = input.prove( premises );
+	cout << "You can terminate the computation by pressing CTRL+C." << endl << endl;
+	auto proof = input.prove( premises );
 	
 	// proof
 	cout << "Done!" << endl;
@@ -169,10 +203,7 @@ int main() {
 		cout << "The statement cannot be proven from the axioms." << endl;
 	} else {
 		cout << "The proof is as follows: " << endl;
-		cout << proof.back() << endl;
-		for( auto itr = proof.rbegin()+1; itr != proof.rend(); ++itr ) {
-			cout << "=" << (*itr) << endl;
-		}
+		proof_print( proof );
 	}
 
 	return 0;
