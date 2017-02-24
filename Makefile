@@ -15,6 +15,9 @@ bin/proof: proof_test.cc obj/bintree.o obj/union_find.o
 bin/trie: trie_test.cc obj/trie.o
 	$(CXX) $(CXXFLAGS) -o bin/trie trie_test.cc obj/trie.o
 
+bin/json: basic_console.cc obj/bintree.o obj/union_find.o
+	$(CXX) $(CXXFLAGS) -o bin/json basic_console.cc obj/bintree.o obj/union_find.o
+
 clean:
 	$(RM) obj/*.o *~ bin/*
 
