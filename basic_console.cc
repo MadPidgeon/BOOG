@@ -45,7 +45,7 @@ int main( int argc, char** argv ) {
 		} catch( ... ) {
 			timeout();
 		}
-	} catch( exception e ) {
+	} catch( std::runtime_error e ) {
 		error( e.what() );
 	}
 	return 0;

@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include <stack>
+#include <deque>
 #include <vector>
 #include <map>
 #include <memory>
@@ -46,7 +46,7 @@ public:
 		~node(); // test
 	};
 	class iterator {
-		std::stack<node*> loc;
+		std::deque<node*> loc;
 		node* val;
 		node* next;
 	public:
@@ -67,7 +67,7 @@ public:
 		iterator( const iterator& ) = default;
 	};
 	class const_iterator {
-		std::stack<const node*> loc;
+		std::deque<const node*> loc;
 		const node* val;
 		const node* next;
 	public:
@@ -80,6 +80,7 @@ public:
 		const_iterator operator++(int);
 		pointer operator->() const;
 		reference operator*() const;
+		const_iterator trace( const binary_tree& other ) const;
 		operator const node*() const;
 		bool operator==( const const_iterator& ) const;
 		bool operator!=( const const_iterator& ) const;
@@ -128,9 +129,10 @@ public:
 	binary_tree& operator=( const binary_tree& );
 	binary_tree& operator=( binary_tree&& );
 	~binary_tree();
+	binary_tree( node* );// move back to private: code smell
 private:
 	
-	binary_tree( node* );
+	
 };
 
 class subtree_equivalence {
@@ -197,3 +199,4 @@ std::ostream& operator<<( std::ostream& os, const subtree_equivalence& se );
 std::istream& operator>>( std::istream& is, subtree_equivalence& se );
 
 int get_free_variable();
+std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof );

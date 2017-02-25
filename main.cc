@@ -92,6 +92,7 @@ bool run_environment( string filename, vector<subtree_equivalence> premises ) {
 		else {
 			#ifdef ALWAYS_SHOW_PROOF
 			proof_print( proof );
+			proof_print( mend_proof( premises, proof ) );
 			#else
 			cout << "True" << endl;
 			#endif

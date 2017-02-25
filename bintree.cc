@@ -1,5 +1,5 @@
 #include <iostream>
-#include <stack>
+#include <deque>
 #include <cassert>
 #include <cmath>
 #include <sstream>
@@ -212,6 +212,58 @@ binary_tree::node* substitution_rules::apply( const binary_tree& T ) {
 	return apply( T.croot() );
 }
 
+std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof ) {
+	if( proof.size() == 0 )
+		return proof;
+	std::vector<binary_tree> mend;
+	binary_tree Q, R;
+	binary_tree::comparator comp;
+
+/*
+	mend.push_back( proof.back() );
+	for( size_t i = proof.size()-1; i > 0; --i ) {
+		for( const auto& S : proof.at(i) ) {
+			for( const auto& A : axioms ) {
+				for( int j : {0,1} ) {
+					bool res = A.apply( j, proof.at(i), &S, R );
+					if( res ) {
+						if( comp( proof.at(i-1), R ) ) {
+							substitution_rules intersect( proof.at(i-1).croot(), R.croot() );
+							cout << "(" << proof.at(i) << " ~ " << R << ")" << endl;
+							mend.push_back( intersect.apply( R ) );
+							goto next;
+						}
+					}
+				}
+			}
+		}
+		throw runtime_error( "Could not reconstruct proof!" );
+	next:;
+	}*/
+
+	for( size_t i = 0; i < proof.size()-1; ++i ) {
+		for( const auto& S : proof.at(i+1) ) {
+			for( const auto& A : axioms ) {
+				for( int j : {0,1} ) {
+					bool res = A.apply( j, proof.at(i+1), &S, R );
+					if( res ) {
+						if( comp( proof.at(i), R ) ) {
+							substitution_rules intersect( proof.at(i).croot(), R.croot() );
+							Q = binary_tree( intersect.apply( R ) );
+							cout << "(" << Q << " ~ " << proof.at(i+1) << ")" << endl;
+							mend.push_back( Q );
+							goto next;
+						}
+					}
+				}
+			}
+		}
+		throw runtime_error( "Could not reconstruct proof!" );
+	next:;
+	}
+	mend.push_back( proof.back() );
+	return mend;
+}
 
 
 // ******************
@@ -451,17 +503,21 @@ binary_tree::iterator& binary_tree::iterator::operator++() {
 		val = nullptr;
 	while( not loc.empty() or next != nullptr ) {
 		if( next != nullptr ) {
-			loc.push( next );
+			loc.push_back( next );
 			next = next->child[0];
 		} else {
-			next = loc.top();
-			loc.pop();
+			next = loc.back();
+			loc.pop_back();
 			val = next;
 			next = next->child[1];
 			break;
 		}
 	}
 	return *this;
+}
+
+binary_tree::const_iterator binary_tree::const_iterator::trace( const binary_tree& other ) const {
+	
 }
 
 binary_tree::iterator binary_tree::iterator::operator++(int) {
@@ -529,11 +585,11 @@ binary_tree::const_iterator& binary_tree::const_iterator::operator++() {
 		val = nullptr;
 	while( not loc.empty() or next != nullptr ) {
 		if( next != nullptr ) {
-			loc.push( next );
+			loc.push_back( next );
 			next = next->child[0];
 		} else {
-			next = loc.top();
-			loc.pop();
+			next = loc.back();
+			loc.pop_back();
 			val = next;
 			next = next->child[1];
 			break;
@@ -586,18 +642,24 @@ binary_tree::const_iterator::operator const node*() const {
 
 binary_tree::node* binary_tree::node::scan( istream& is ) {
 	is >> ws;
+	if( is.eof() )
+		throw runtime_error( "Unexpected end of string!" );
 	char c = char( is.peek() );
 	if( c == '(' ) {
 		is.get();
 		node* a = scan( is );
 		is >> ws;
+		if( is.eof() )
+			throw runtime_error( "Unexpected end of string!");
 		int op = is.get();
 		if( not( ispunct( op ) and op != '(' and op != ')' ) )
-			throw runtime_error("Expected operator instead of '" + string( 1, char(op) ) + "'!");
+			throw runtime_error( "Expected operator instead of '" + string( 1, char(op) ) + "'!" );
+		if( is.eof() )
+			throw runtime_error( "Unexpected end of string!" );
 		node* b = scan( is );
 		is >> ws;
 		if( ( c = char( is.get() ) ) != ')' )
-			throw runtime_error("Expected closing bracket instead of '" + string( 1, c ) + "' is not an operator!");
+			throw runtime_error( "Expected closing bracket instead of '" + string( 1, c ) + "' is not an operator!" );
 		return new node( a, b, op );
 	} else if( isalpha( c ) ) {
 		is.get();
@@ -610,7 +672,7 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		is >> id;
 		return new node( BOUND_VARIABLE_OFFSET-id-1 );
 	} else {
-		throw runtime_error("Unexpected character '" + string( 1, c ) + "'!");
+		throw runtime_error( "Unexpected character '" + string( 1, c ) + "'!" );
 	}
 }
 
@@ -691,9 +753,13 @@ ostream& operator<<( ostream& os, const binary_tree& bt ) {
 }
 
 void subtree_equivalence::scan( istream& is ) {
+	char c;
 	tree[0].scan( is );
 	is >> ws;
-	assert( is.get() == '=' );
+	if( is.eof() )
+		throw runtime_error( "Unexpected end of string!" );
+	if( ( c = char( is.get() ) ) != '=' )
+		throw runtime_error( "Expected character '=' instead of '" + string( 1, c ) + "'!" );
 	tree[1].scan( is );
 }
 
@@ -869,6 +935,9 @@ binary_tree::binary_tree( binary_tree::node* r ) { // change
 binary_tree::binary_tree( string in ) {
 	istringstream ss( move( in ) );
 	scan( ss );
+	ss >> ws;
+	if( not ss.eof() )
+		throw runtime_error( "Not all characters were read!");
 }
 
 binary_tree::binary_tree( binary_tree::const_iterator itr ) : binary_tree( itr->clone() ) {
@@ -904,6 +973,9 @@ binary_tree::~binary_tree() {
 subtree_equivalence::subtree_equivalence( string in ) {
 	istringstream ss( move( in ) );
 	scan( ss );
+	ss >> ws;
+	if( not ss.eof() )
+		throw runtime_error( "Not all characters were read!");
 }
 
 subtree_equivalence::subtree_equivalence( const subtree_equivalence& other ) {
