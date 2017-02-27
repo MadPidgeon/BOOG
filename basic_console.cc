@@ -42,7 +42,7 @@ int main( int argc, char** argv ) {
 		try {
 			auto r = equi.prove( premises );
 			succes( r );
-		} catch( ... ) {
+		} catch( computation_timeout ) {
 			timeout();
 		}
 	} catch( std::runtime_error e ) {

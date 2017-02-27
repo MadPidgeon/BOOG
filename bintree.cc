@@ -314,7 +314,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 				#ifdef PROOF_TERMINATE
 				--terminator;
 				if( terminator == 0 )
-					throw runtime_error("subtree_equivalence::prove has timed out!");
+					throw computation_timeout("subtree_equivalence::prove has timed out!");
 				#endif
 
 				for( int i = 0; i < 2; ++i ) {
@@ -986,4 +986,16 @@ subtree_equivalence::subtree_equivalence( const subtree_equivalence& other ) {
 subtree_equivalence::subtree_equivalence( subtree_equivalence&& other ) {
 	first() = std::move( other.first() );
 	second() = std::move( other.second() );
+}
+
+// ******************
+// Exceptions
+// ******************
+
+const char* computation_timeout::what() const noexcept {
+	return message.c_str();
+}
+
+computation_timeout::computation_timeout( std::string s ) {
+	message = s;
 }

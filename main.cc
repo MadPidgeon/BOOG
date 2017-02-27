@@ -83,7 +83,7 @@ bool run_environment( string filename, vector<subtree_equivalence> premises ) {
 		cout << input << ": " << flush;
 		try {
 			proof = input.prove( premises );
-		} catch( ... ) {
+		} catch( computation_timeout ) {
 			cout << "Timeout" << endl;
 			continue;
 		}				

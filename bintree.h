@@ -192,6 +192,14 @@ public:
 	operator bool() const;
 };
 
+class computation_timeout : public std::exception {
+	std::string message;
+public:
+	virtual const char* what() const noexcept;
+	computation_timeout( std::string s );
+	virtual ~computation_timeout() = default;
+};
+
 
 std::ostream& operator<<( std::ostream& os, const binary_tree& bt );
 std::istream& operator>>( std::istream& is, binary_tree& bt );
