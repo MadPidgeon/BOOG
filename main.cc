@@ -174,7 +174,7 @@ int main() {
 	for( const auto& s : environments )
 		cout << setw(10) << environment_names.compress( s ) << " " << s << endl;
 	while( true ) {
-		cout << ">";
+		cout << "> ";
 		getline( cin, s );
 		if( s.empty() )
 			break;
