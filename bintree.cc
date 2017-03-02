@@ -12,6 +12,7 @@
 
 //#define DEBUG_PROVE
 //#define DEBUG_SUB
+//#define DEBUG_MEND
 #define PROOF_TERMINATE 1000000
 
 using namespace std;
@@ -133,7 +134,7 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 	equivalences.clear( int(n) );
 	busy.resize( n, false );
 	// intersect A and B
-	binary_tree r( intersect( A, B ) );
+	r = binary_tree( intersect( A, B ) );
 	non_contradiction = ( r.size() != 0 );
 	#ifdef DEBUG_SUB
 	for( int x = 0; x < n; ++x ) {
@@ -212,56 +213,79 @@ binary_tree::node* substitution_rules::apply( const binary_tree& T ) {
 	return apply( T.croot() );
 }
 
-std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof ) {
+const binary_tree& substitution_rules::intersection() const {
+	return r;
+}
+
+void mend_free_variable_elimination( const binary_tree& free, const binary_tree& locked ) {
+
+}
+
+
+std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof, binary_tree current ) {
 	if( proof.size() == 0 )
 		return proof;
 	std::vector<binary_tree> mend;
-	binary_tree Q, R;
+	binary_tree Q, R, S;
 	binary_tree::comparator comp;
 
-/*
-	mend.push_back( proof.back() );
-	for( size_t i = proof.size()-1; i > 0; --i ) {
-		for( const auto& S : proof.at(i) ) {
+	mend = proof;
+	mend[0] = current;
+	for( size_t i = 1; i < mend.size(); ++i ) {
+		// eliminate free variable from mend[i] by looking at mend[i-1] which has no free variables
+		for( auto itr = proof.at(i).cbegin(); itr != binary_tree::const_iterator(); ++itr ) {
 			for( const auto& A : axioms ) {
-				for( int j : {0,1} ) {
-					bool res = A.apply( j, proof.at(i), &S, R );
-					if( res ) {
-						if( comp( proof.at(i-1), R ) ) {
-							substitution_rules intersect( proof.at(i-1).croot(), R.croot() );
-							cout << "(" << proof.at(i) << " ~ " << R << ")" << endl;
-							mend.push_back( intersect.apply( R ) );
-							goto next;
-						}
-					}
-				}
-			}
-		}
-		throw runtime_error( "Could not reconstruct proof!" );
-	next:;
-	}*/
+				for( int side : {0,1} ) {
+					bool result = A.apply( side, proof.at(i), &*itr, R );
+					if( result ) {
+						if( comp( proof.at( i-1 ), R ) ) { 
+							// found position where axiom was applied
+							#ifdef DEBUG_MEND
+							cout << "Axiom " << A.side(side) << " -> " << A.side(not side) << endl;
+							#endif
 
-	for( size_t i = 0; i < proof.size()-1; ++i ) {
-		for( const auto& S : proof.at(i+1) ) {
-			for( const auto& A : axioms ) {
-				for( int j : {0,1} ) {
-					bool res = A.apply( j, proof.at(i+1), &S, R );
-					if( res ) {
-						if( comp( proof.at(i), R ) ) {
-							substitution_rules intersect( proof.at(i).croot(), R.croot() );
-							Q = binary_tree( intersect.apply( R ) );
-							cout << "(" << Q << " ~ " << proof.at(i+1) << ")" << endl;
-							mend.push_back( Q );
-							goto next;
+							auto nitr = mend.at(i-1).mirror_iterator( proof.at(i), itr );
+
+							#ifdef DEBUG_MEND
+							cout << "At ";
+							itr->print(cout);
+							cout << ", equivalently ";
+							nitr->print(cout);
+							cout << endl;
+							#endif
+
+							result = A.apply( not side, mend.at(i-1), &*nitr, S );
+							if( not result )
+								throw std::runtime_error( "Error mending proof!" );
+
+							#ifdef DEBUG_MEND
+							cout << "Resulting in " << S << endl;
+							#endif
+
+							substitution_rules intersect( mend[i].croot(), S.croot() );
+							mend[i] = intersect.apply( S );
+
+							#ifdef DEBUG_MEND
+							cout << "Intermediate result: " << mend[i] << endl;
+							#endif
+
+							for( auto& n : mend[i] )
+								if( n.free_variable() )
+									n.id = ARBITRARY_CONSTANT;
+
+							#ifdef DEBUG_MEND
+							cout << proof[i-1] << "=" << proof[i] << " : " << mend[i-1] << "=" << mend[i] << endl;
+							#endif
+
+							goto sorry_edsger;
 						}
 					}
 				}
 			}
 		}
-		throw runtime_error( "Could not reconstruct proof!" );
-	next:;
+		throw std::runtime_error( "Could not apply axioms correctly in mending proof!" );
+		sorry_edsger:;
 	}
-	mend.push_back( proof.back() );
 	return mend;
 }
 
@@ -330,7 +354,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 							while( true ) {
 								auto result = master.find( Y );
 								proof.emplace_back( Y );
-								if( result->second == empty_tree )
+								if( result->second == empty_tree ) // returns proof in 'reverse'
 									return proof;
 								Y = move( result->second );
 							}
@@ -376,7 +400,19 @@ bool binary_tree::node::leaf() const {
 }
 
 bool binary_tree::node::constant() const {
-	return leaf() and id < 0; // leaf perhaps not required
+	return leaf() and id < AXIOMATIC_VARIABLE_OFFSET; // leaf perhaps not required
+}
+
+bool binary_tree::node::free_variable() const {
+	return leaf() and id >= FREE_VARIABLE_OFFSET; // leaf perhaps not required
+}
+
+bool binary_tree::node::contains_free_variable() const {
+	return free_variable() || ( child[0] and child[0]->contains_free_variable() ) || ( child[1] and child[1]->contains_free_variable() );
+}
+
+bool binary_tree::contains_free_variable() const {
+	return root->contains_free_variable();
 }
 
 bool binary_tree::node::grab( const binary_tree::node* rule, map<int,const binary_tree::node*>& result ) const {
@@ -634,6 +670,39 @@ binary_tree::const_iterator binary_tree::crootitr() const {
 
 binary_tree::const_iterator::operator const node*() const {
 	return val;
+}
+
+binary_tree::const_iterator binary_tree::mirror_iterator( const binary_tree& other, const_iterator itr ) const {
+	return itr.mirror( other.croot(), croot() );
+}
+
+binary_tree::const_iterator binary_tree::const_iterator::mirror( const binary_tree::node* source, const binary_tree::node* target ) const {
+	std::deque<const binary_tree::node*> parallel;
+	for( const binary_tree::node* child : loc ) {
+		while( source != child ) {
+			source = source->child[1];
+			target = target->child[1];
+			if( source == nullptr )
+				throw runtime_error( "Error in binary_tree::const_iterator::mirror: iterator and source are incompatible!" );
+			if( target == nullptr )
+				throw runtime_error( "Error in binary_tree::const_iterator::mirror: source and target are incompatible!" );
+		}
+		source = source->child[0];
+		target = target->child[0];
+	}
+	while( source != val ) {
+		source = source->child[1];
+		target = target->child[1];
+		if( source == nullptr )
+			throw runtime_error( "Error in binary_tree::const_iterator::mirror: iterator and source are incompatible!" );
+		if( target == nullptr )
+			throw runtime_error( "Error in binary_tree::const_iterator::mirror: source and target are incompatible!" );
+	}
+	const_iterator r;
+	r.loc = parallel;
+	r.val = target;
+	r.next = target->child[1];
+	return r;
 }
 
 // ******************

@@ -114,6 +114,27 @@ int main() {
 	else for( auto step : proof5 )
 		cout << step << endl;
 */
+
+	cout << "----- Iterator Test -------------" << endl;
+	binary_tree source( "(A+(B+C))" );
+	binary_tree target( "(a+(b+c))" );
+	auto itr_source = source.cbegin();
+	for( int i = 0; i < 5; ++i ) {
+		cout << "i=" << i << endl;
+		try {
+			itr_source->print( cout ), cout << endl;
+			auto res = target.mirror_iterator( source, itr_source );
+			res->print(cout), cout << endl;
+		} catch( runtime_error e ) {
+			cout << e.what() << endl;;
+		}
+		itr_source++;
+		cout << "---------" << endl;
+	}
+
+
+
+
 	cout << "---------------------------------" << endl;
 	equi11.prove({});
 

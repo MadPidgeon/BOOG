@@ -12,6 +12,7 @@
 #define FREE_VARIABLE_OFFSET 26
 #define AXIOMATIC_VARIABLE_OFFSET 0
 #define BOUND_VARIABLE_OFFSET -26
+#define ARBITRARY_CONSTANT (BOUND_VARIABLE_OFFSET-1337-1)
 // #define VERBOSE_PROOF
 
 class binary_tree {
@@ -24,7 +25,9 @@ public:
 		node* child[2];
 		bool leaf() const;
 		bool constant() const;
+		bool free_variable() const;
 		bool grab( const node*, std::map<int,const node*>& ) const;
+		bool contains_free_variable() const;
 		bool operator==( const node& other ) const;
 		bool operator!=( const node& other ) const;
 		bool operator<( const node& other ) const;
@@ -80,6 +83,7 @@ public:
 		const_iterator operator++(int);
 		pointer operator->() const;
 		reference operator*() const;
+		const_iterator mirror( const binary_tree::node* source, const binary_tree::node* target ) const;
 		const_iterator trace( const binary_tree& other ) const;
 		operator const node*() const;
 		bool operator==( const const_iterator& ) const;
@@ -103,8 +107,10 @@ public:
 	void scan( std::istream& );
 	void print( std::ostream& ) const;
 	void hash_print( std::ostream& ) const;
+	bool contains_free_variable() const;
 	binary_tree clonesert( const node*, node* ) const;
 	bool transform( const node*, const binary_tree&, const binary_tree&, binary_tree& ) const;
+	const_iterator mirror_iterator( const binary_tree& other, const_iterator itr ) const;
 	//bool derives( const binary_tree& ) const;
 	const binary_tree::node* croot() const;
 	iterator rootitr();
@@ -174,6 +180,7 @@ class substitution_rules {
 	std::vector<binary_tree> gcst;
 	std::vector<std::forward_list<int>> dep_graph;
 	std::vector<int> top_sort;
+	binary_tree r;
 	UF equivalences;
 public:
 	substitution_rules( const binary_tree::node* A, const binary_tree::node* B );
@@ -184,6 +191,7 @@ public:
 	bool validate_dependency();
 	bool parallel_walk( int sa, const binary_tree::node* A, int sb, const binary_tree::node* B );
 	//bool add_rule( int s, int id, const binary_tree::node* T );
+	const binary_tree& intersection() const;
 	bool add_equivalence( int sa, int sb );
 	bool add_rule( int symbol, const binary_tree::node* T );
 	binary_tree::node* apply( const binary_tree::node* T );
@@ -207,4 +215,4 @@ std::ostream& operator<<( std::ostream& os, const subtree_equivalence& se );
 std::istream& operator>>( std::istream& is, subtree_equivalence& se );
 
 int get_free_variable();
-std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof );
+std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof, binary_tree start );

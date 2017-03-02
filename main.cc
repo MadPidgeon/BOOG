@@ -91,8 +91,8 @@ bool run_environment( string filename, vector<subtree_equivalence> premises ) {
 			cout << "Does not follow" << endl;
 		else {
 			#ifdef ALWAYS_SHOW_PROOF
-			proof_print( proof );
-			proof_print( mend_proof( premises, proof ) );
+			// proof_print( proof );
+			proof_print( mend_proof( premises, proof, input.side(1) ) );
 			#else
 			cout << "True" << endl;
 			#endif
@@ -138,7 +138,7 @@ int main() {
 	cout << "Enter the abbreviation of the axioms you want to use, separated by a newline." << endl;
 	cout << "Enter an empty line to continue." << endl;
 	while( true ) {
-		cout << ">";
+		cout << "> ";
 		getline( cin, s );
 		if( s.empty() )
 			break;
