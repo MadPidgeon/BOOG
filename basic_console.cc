@@ -40,8 +40,9 @@ int main( int argc, char** argv ) {
 		for( int i = 2; i < argc; ++i )
 			premises.emplace_back( string( argv[i] ) );
 		try {
-			auto r = equi.prove( premises );
-			succes( r );
+			auto proof = equi.prove( premises );
+			proof = mend_proof( premises, proof, equi.side(1) );
+			succes( proof );
 		} catch( computation_timeout ) {
 			timeout();
 		}

@@ -13,7 +13,7 @@
 //#define DEBUG_PROVE
 //#define DEBUG_SUB
 //#define DEBUG_MEND
-#define PROOF_TERMINATE 1000000
+#define PROOF_TERMINATE 10000000
 
 using namespace std;
 
@@ -217,11 +217,6 @@ const binary_tree& substitution_rules::intersection() const {
 	return r;
 }
 
-void mend_free_variable_elimination( const binary_tree& free, const binary_tree& locked ) {
-
-}
-
-
 std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axioms, const std::vector<binary_tree>& proof, binary_tree current ) {
 	if( proof.size() == 0 )
 		return proof;
@@ -291,7 +286,7 @@ std::vector<binary_tree> mend_proof( const std::vector<subtree_equivalence>& axi
 
 
 // ******************
-// Magic
+// Generating proof
 // ******************
 
 int get_free_variable() {
@@ -461,7 +456,7 @@ bool subtree_equivalence::apply( int i, const binary_tree& parent, const binary_
 	substitution_rules R( itr, side(i).croot() );
 	if( not R )
 		return false;
-	res = std::move( parent.clonesert( itr, R.apply( side(not i) ) ) );
+	res = R.apply( parent.clonesert( itr, side( not i ).croot()->clone() ) );
 	return true;
 }
 
