@@ -22,8 +22,17 @@ using namespace std;
 // ******************
 
 binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, const binary_tree::node* B ) {
+	// empty tree case
+	if( A == nullptr or B == nullptr )
+		return nullptr;
+
 	#ifdef DEBUG_SUB
-	cout << "Intersect: " << A->id << " " << B->id << endl;
+	cout << "Intersect: ";
+	A->print( cout );
+	cout << " ";
+	B->print( cout ); 
+	cout << endl;
+	cin.get();
 	#endif
 
 	// both constant
@@ -49,13 +58,19 @@ binary_tree::node* substitution_rules::intersect( const binary_tree::node* A, co
 	// both are operators
 	if( A->id != B->id )
 		return nullptr;
-	binary_tree::node* l = intersect( A->child[0], B->child[0] );
-	if( l == nullptr )
-		return nullptr;
-	binary_tree::node* r = intersect( A->child[1], B->child[1] );
-	if( r == nullptr ) {
-		delete l;
-		return nullptr;
+	binary_tree::node* l = nullptr, * r = nullptr;
+	if( A->child[0] != B->child[0] ) {
+		l = intersect( A->child[0], B->child[0] );
+		if( l == nullptr )
+			return nullptr;
+	}
+	if( A->child[1] != B->child[1] ) {
+		r = intersect( A->child[1], B->child[1] );
+		if( r == nullptr  ){
+			if( l != nullptr )
+				delete l;
+			return nullptr;
+		}
 	}
 	return new binary_tree::node( l, r, A->id );
 }
@@ -90,7 +105,11 @@ bool substitution_rules::add_equivalence( int as, int bs ) {
 
 bool substitution_rules::add_rule( int symbol, const binary_tree::node* T ) {
 	#ifdef DEBUG_SUB
-	cout << "Add rule: " << char(symbol+'a') << " => ";
+	if( symbol >= FREE_VARIABLE_OFFSET )
+		cout << "Add rule: t" << (symbol - FREE_VARIABLE_OFFSET);
+	else
+		cout << "Add rule: " << char(symbol+'A'); 
+	cout << " => ";
 	T->print(cout);
 	cout << endl;
 	#endif
@@ -138,10 +157,13 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 	non_contradiction = ( r.size() != 0 );
 	#ifdef DEBUG_SUB
 	for( int x = 0; x < n; ++x ) {
-		cout << char(index_to_symbol[x]+'a') << " = " << gcst[x] << endl;
+		cout << char(index_to_symbol[x]+'A') << " = " << gcst[x] << endl;
 	}
 	#endif
 	if( non_contradiction and n > 0) {
+		#ifdef DEBUG_SUB
+		cout << "Noncontradiction" << endl;
+		#endif
 		// validate dependencies
 		dep_graph.resize( n );
 		for( size_t i = 0; i < n; ++i ) {
@@ -171,6 +193,8 @@ substitution_rules::substitution_rules( const binary_tree::node* A, const binary
 }
 
 void substitution_rules::add_dep( int index, const binary_tree::node* T ) {
+	if( not T )
+		return;
 	if( T->leaf() ) {
 		if( not T->constant() ) {
 			//cout << "Add dependency: " << char(index_to_symbol[index]+'a') << " ~> " << char(T->id+'a') << endl;
@@ -183,7 +207,7 @@ void substitution_rules::add_dep( int index, const binary_tree::node* T ) {
 }
 
 const binary_tree& substitution_rules::at( int symbol ) const {
-	return gcst.at(symbol_to_index.at(symbol));
+	return gcst.at( symbol_to_index.at( symbol ) );
 }
 
 substitution_rules::operator bool() const {
@@ -191,6 +215,8 @@ substitution_rules::operator bool() const {
 }
 
 binary_tree::node* substitution_rules::apply( const binary_tree::node* T ) {
+	if( not T )
+		return nullptr;
 	if( not T->leaf() )
 		return new binary_tree::node( apply( T->child[0] ), apply( T->child[1] ), T->id );
 	if( T->constant() )
@@ -296,8 +322,11 @@ int get_free_variable() {
 
 class sizecomp {
 public:
-	bool operator()( const binary_tree& a, const binary_tree& b ) {
+	/*bool operator()( const binary_tree& a, const binary_tree& b ) {
 		return a.height() > b.height() or ( a.height() == b.height() and a.size() > b.size() );
+	}*/
+	bool operator()( const binary_tree& a, const binary_tree& b ) {
+		return a.size() > b.size() or ( a.size() == b.size() and a.height() > b.height() );
 	}
 };
 
@@ -317,7 +346,7 @@ vector<binary_tree> subtree_equivalence::prove( vector<subtree_equivalence> axio
 		binary_tree X = move( todo.top() );
 		todo.pop();
 		#ifdef DEBUG_PROVE
-		cout << "Tree: " << X << endl;
+		cout << "Tree (W=" << X.size() << ",H=" << X.height() << "): " << X << endl;
 		#endif
 
 		for( const auto& axiom : axioms ) {
@@ -704,6 +733,10 @@ binary_tree::const_iterator binary_tree::const_iterator::mirror( const binary_tr
 // I/O
 // ******************
 
+constexpr bool isgrouping( char c ) {
+	return c == '(' or c == ')' or c == '[' or c == ']' or c == ',';
+}
+
 binary_tree::node* binary_tree::node::scan( istream& is ) {
 	is >> ws;
 	if( is.eof() )
@@ -716,7 +749,7 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		if( is.eof() )
 			throw runtime_error( "Unexpected end of string!");
 		int op = is.get();
-		if( not( ispunct( op ) and op != '(' and op != ')' ) )
+		if( ( not ispunct( op ) ) or isgrouping( char( op ) ) )
 			throw runtime_error( "Expected operator instead of '" + string( 1, char(op) ) + "'!" );
 		if( is.eof() )
 			throw runtime_error( "Unexpected end of string!" );
@@ -735,6 +768,28 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 		int id;
 		is >> id;
 		return new node( BOUND_VARIABLE_OFFSET-id-1 );
+	} else if( c == '[' ) {
+		is.get();
+		int id;
+		is >> id;
+		if( id < 0 )
+			throw runtime_error( "Operator ID should be non-negative!" );
+		if( ( c = char( is.get() ) ) != ':' )
+			throw runtime_error( "Invalid dependency phrase!" );
+		node* r = new node( nullptr, nullptr, -id-1 );
+		node** t = &r;
+		node* u;
+		do {
+			(**t).child[1] = new node( scan( is ), nullptr, 0 );
+			t = &(**t).child[1];
+		} while( ( c = char( is.get() ) ) == ',' );
+		if( c != ']' )
+			throw runtime_error( "Expected end of dependency phrase!" );
+		u = (**t).child[0];
+		(**t).child[0] = nullptr;
+		delete *t;
+		*t = u;
+		return r;
 	} else {
 		throw runtime_error( "Unexpected character '" + string( 1, c ) + "'!" );
 	}
@@ -750,11 +805,11 @@ void binary_tree::node::print( ostream& os ) const {
 			os << char( 'A' + id - AXIOMATIC_VARIABLE_OFFSET );
 		else
 			os << "t" << ( id-FREE_VARIABLE_OFFSET );
-	} else {
+	} else if( id > 0 ) {
 		os << "(";
 		if( not child[0] )
 			os << ERROR_SYMBOL;
-		else 
+		else if( id != 0 ) 
 			child[0]->print( os );
 		os << char(id);
 		if( not child[1] )
@@ -762,6 +817,23 @@ void binary_tree::node::print( ostream& os ) const {
 		else 
 			child[1]->print( os );
 		os << ")";
+	} else if( id < 0 ) {
+		os << "[" << (-1-id) << ":";
+		if( not child[1] )
+			os << ERROR_SYMBOL;
+		else 
+			child[1]->print( os );
+		os << "]";
+	} else if( id == 0 ) {
+		if( not child[0] )
+			os << ERROR_SYMBOL;
+		else
+			child[0]->print( os );
+		os << ",";
+		if( not child[1] )
+			os << ERROR_SYMBOL;
+		else 
+			child[1]->print( os );
 	}
 }
 
@@ -780,9 +852,15 @@ void binary_tree::node::hash_print( std::ostream& os, std::unordered_map<int,int
 		}
 	} else {
 		os << "(";
-		child[0]->hash_print( os, table );
-		os << char(id);
-		child[1]->hash_print( os, table );
+		if( child[0] )
+			child[0]->hash_print( os, table );
+		else
+			os << ERROR_SYMBOL;
+		os << id;
+		if( child[1] )
+			child[1]->hash_print( os, table );
+		else
+			os << ERROR_SYMBOL;
 		os << ")";
 	}
 }
@@ -923,6 +1001,10 @@ bool binary_tree::comparator::operator()( const binary_tree& A, const binary_tre
 }
 
 bool binary_tree::comparator::cmp( const binary_tree::node* A, const binary_tree::node* B, std::unordered_map<int,int>& AtoB, std::unordered_map<int,int>& BtoA ) const {
+	if( A == B )
+		return true;
+	if( (not A) or (not B) )
+		return false;
 	if( A->leaf() != B->leaf() )
 		return false;
 	if( A->leaf() ) {
@@ -975,7 +1057,7 @@ binary_tree::node::node( node* a, node* b, int v ) {
 	int h1 = child[0] ? child[0]->height : -1;
 	int h2 = child[1] ? child[1]->height : -1;
 	height = max( h1, h2 )+1;
-	size = ( child[0] ? child[0]->size : 0 ) + ( child[1] ? child[1]->size : 0 ) + not ( child[0] || child[1] );
+	size = ( child[0] ? child[0]->size : 0 ) + ( child[1] ? child[1]->size : 0 ) + 1;
 }
 
 binary_tree::node::node( node* a, node* b ) : node( a, b, -2 ) {

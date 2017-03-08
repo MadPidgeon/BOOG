@@ -80,7 +80,7 @@ bool run_environment( string filename, vector<subtree_equivalence> premises ) {
 			cout << premises.at(i) << ", ";
 		if( original_premise_count < premises.size() )
 			cout << premises.back() << " => ";
-		cout << input << ": " << flush;
+		cout << input << ": " << endl;
 		try {
 			proof = input.prove( premises );
 		} catch( computation_timeout ) {
@@ -91,7 +91,7 @@ bool run_environment( string filename, vector<subtree_equivalence> premises ) {
 			cout << "Does not follow" << endl;
 		else {
 			#ifdef ALWAYS_SHOW_PROOF
-			// proof_print( proof );
+			//proof_print( proof );
 			proof_print( mend_proof( premises, proof, input.side(1) ) );
 			#else
 			cout << "True" << endl;

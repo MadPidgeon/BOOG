@@ -114,6 +114,10 @@ int main() {
 	else for( auto step : proof5 )
 		cout << step << endl;
 */
+	cout << "----- New Syntax Test -----------" << endl;
+	binary_tree inversion( "([0:a]*[0:[0:a]])" );
+	binary_tree inversion_axiom( "(A*[0:A])" );
+	substitution_rules inversion_substitution( inversion_axiom.croot(), inversion.croot() );
 
 	cout << "----- Iterator Test -------------" << endl;
 	binary_tree source( "(A+(B+C))" );
