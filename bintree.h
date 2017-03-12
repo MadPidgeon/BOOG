@@ -25,6 +25,9 @@ public:
 		node* child[2];
 		bool leaf() const;
 		bool constant() const;
+		int  numeric_value() const;
+		bool bound_variable() const;
+		bool axiomatic_variable() const;
 		bool free_variable() const;
 		bool grab( const node*, std::map<int,const node*>& ) const;
 		bool contains_free_variable() const;

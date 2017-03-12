@@ -423,12 +423,24 @@ bool binary_tree::node::leaf() const {
 	return child[0] == nullptr and child[1] == nullptr;
 }
 
+int binary_tree::node::numeric_value() const {
+	return BOUND_VARIABLE_OFFSET - id - 1;
+}
+
 bool binary_tree::node::constant() const {
 	return leaf() and id < AXIOMATIC_VARIABLE_OFFSET; // leaf perhaps not required
 }
 
 bool binary_tree::node::free_variable() const {
 	return leaf() and id >= FREE_VARIABLE_OFFSET; // leaf perhaps not required
+}
+
+bool binary_tree::node::bound_variable() const {
+	return leaf() and id >= BOUND_VARIABLE_OFFSET and id < AXIOMATIC_VARIABLE_OFFSET; // leaf perhaps not required
+}
+
+bool binary_tree::node::axiomatic_variable() const {
+	return leaf() and id >= AXIOMATIC_VARIABLE_OFFSET and id < FREE_VARIABLE_OFFSET; // leaf perhaps not required
 }
 
 bool binary_tree::node::contains_free_variable() const {
@@ -798,7 +810,7 @@ binary_tree::node* binary_tree::node::scan( istream& is ) {
 void binary_tree::node::print( ostream& os ) const {
 	if( not child[0] and not child[1] ) {
 		if( id < BOUND_VARIABLE_OFFSET )
-			os << ( BOUND_VARIABLE_OFFSET - id - 1 );
+			os << numeric_value();
 		else if( id < AXIOMATIC_VARIABLE_OFFSET )
 			os << char( 'a' + id - BOUND_VARIABLE_OFFSET );
 		else if( id < FREE_VARIABLE_OFFSET ) 

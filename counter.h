@@ -20,3 +20,4 @@ public:
 };
 
 std::ostream& operator<<( std::ostream& os, const operator_table& T );
+bool check( std::vector<operator_table> operators, std::vector<int> operator_mapping, std::vector<subtree_equivalence> axioms );
